@@ -453,6 +453,8 @@ def createGroupsFrom_ou_groups(hashStore, logger, ldp):
             codeApogee = regexFirstMatch("^gpetp\.(.*)",cn)
             name = u"Groupe - " + ou + " (gpetp-" + codeApogee + ")"
             description = description + " (" + codeApogee + ")"
+            if len(seeAlso) > 1:
+                exit(cn + ": can not handle case of multiple etape parents " + repr(seeAlso))
             parent = "diploma_" + regexFirstMatch("^ou=([^,]*)", seeAlso[0])
         else:   
             name = cn              
