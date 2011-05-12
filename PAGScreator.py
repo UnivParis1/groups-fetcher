@@ -88,7 +88,8 @@ def write_to_file(doc, name):
 def checkAndIndent(xmlFile):
     tmp_file = xmlFile + ".tmp"
     os.rename(xmlFile, tmp_file)
-    subprocess.check_call(["xmllint", "--format", "-o", xmlFile, tmp_file])
+    if subprocess.call(["xmllint", "--format", "-o", xmlFile, tmp_file]) != 0:
+        exit("xmllint failed. install libxml2-utils?")
     os.remove(tmp_file)
 
 def configureLogger(logger):
