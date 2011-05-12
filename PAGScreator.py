@@ -445,6 +445,9 @@ def createGroupsFrom_ou_groups(hashStore, logger, ldp):
             codeApogee = regexFirstMatch("^gpelp\.(.*)",cn)
             name = ou + " (" + codeApogee + ")"
             description = description + " (" + codeApogee + ")"
+            if len(seeAlso) > 1:
+                #print ("skipping group %s (ou=%s): with %d parents %s" % (cn, ou, len(seeAlso), repr(seeAlso)))
+                continue
             parent = regexFirstMatch("^cn=([^,]*)", seeAlso[0])
             if not parent in validGroups:
                 #print "skipping group " + cn + " with unknown parent " + parent
