@@ -28,6 +28,7 @@ ldapUsername  = Config.get('ldap', 'username')
 ldapPassword  = Config.get('ldap', 'password')
 baseDN        = Config.get('ldap', 'baseDN')
 etapesDN      = Config.get('ldap', 'etapesDN')
+oldKeys       = not esup_portail3
 
 personnelDescription = {
     'staff': 'personnels administratifs et techniques', 
@@ -43,6 +44,42 @@ membersRegexTester={ "placeholder": None }
 structuresDN = "ou=structures,"+baseDN
 
 timeout=0
+
+def etudiantsKey():
+    if oldKeys:
+        return "diploma"
+    return "etudiants"
+
+def etudiantsComposanteKey(composante):
+    if oldKeys:
+        return "diploma_composante_" + composante
+    return "etudiants_composante_" + composante
+
+def businessCategoryKey(businessCategory):
+    if oldKeys:
+        if businessCategory == "pedagogy":
+            return "composantes"
+        elif businessCategory == "research":
+            return "laboratoires"
+        if businessCategory == "administration":
+            return "services"
+
+    if businessCategory == "pedagogy":
+        return "personnels_composantes"
+    else:
+        return businessCategory
+
+def structureKey(businessCategory, supannCodeEntite):
+    def structurePrefix(businessCategory):
+        if oldKeys:
+            if businessCategory == "pedagogy":
+                return "ufr_"
+            elif businessCategory == "research":
+                return "research_center_"
+            elif businessCategory == "administration":
+                return "service_"
+        return "structure_"
+    return structurePrefix(businessCategory) + supannCodeEntite
 
 def write_to_file(doc, name):
     w = codecs.open(name, "w", "utf-8");
@@ -269,21 +306,19 @@ def get_ldap_values(ldapEntry, attrs):
 
 def createCommonRoots(hashStore):
 	# Création du conteneur d'étapes avec ses membres
-	addGroup(hashStore, None, "etudiants", u"Composantes (étudiants)", u"Toutes les groupes-étapes de l'établissement issus de LDAP", 
+	addGroup(hashStore, None, etudiantsKey(), u"Composantes (étudiants)", u"Toutes les groupes-étapes de l'établissement issus de LDAP", 
                         regexTester("supannEtuEtape", ".*"))
 
 def structureParent(businessCategory, supannCodeEntiteParent):
     # Selon le type d'ou on détermine le type de groupe
     # Création des groupes pour les services
-    if businessCategory == "pedagogy" :
-        return 'personnels_composantes'
-    elif businessCategory == "research" or businessCategory == "library" :                    
-        return businessCategory
+    if businessCategory == "pedagogy" or businessCategory == "research" or businessCategory == "library":
+        return businessCategoryKey(businessCategory)
     elif businessCategory == "administration" :
         if supannCodeEntiteParent != None and supannCodeEntiteParent != "UP1":
-            return "structure_" + supannCodeEntiteParent
+            return structureKey(businessCategory, supannCodeEntiteParent)
         else: 
-            return businessCategory
+            return businessCategoryKey(businessCategory)
     elif businessCategory == "council":
         # skip silently
         return None
@@ -307,8 +342,8 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
 	for ldapEntry in result_set :	
 		supannCodeEntite, description, businessCategory, supannCodeEntiteParent = ldapEntry
 
-                isPedagogy = "etudiants_composante_"+supannCodeEntite in neededParents
-                key="structure_"+supannCodeEntite
+                isPedagogy = etudiantsComposanteKey(supannCodeEntite) in neededParents
+                key=structureKey(businessCategory, supannCodeEntite)
                 mainTester = exactTester('supannEntiteAffectation', supannCodeEntite)
 
                 parent = structureParent(businessCategory, supannCodeEntiteParent)
@@ -328,22 +363,22 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
 
 		if composanteKey != key:
                         # duplicate the structure which is both pedagogy and something else
-                        parent = 'personnels_composantes'
+                        parent = businessCategoryKey('pedagogy')
                         description_ = description + " (composante)"
                         addGroupMulti(hashStore, parent, composanteKey, description_, description_, testers, { "mainTester": mainTester })
 
                 if isPedagogy:
                     ### Création des conteneurs d'étapes pour les étudiants
-                    addGroupMulti(hashStore, "etudiants", "etudiants_composante_"+supannCodeEntite, 
+                    addGroupMulti(hashStore, etudiantsKey(), etudiantsComposanteKey(supannCodeEntite), 
                                   description + u" (étudiants)",
                                   u"Toutes les étapes de la composante "+description+" issus de LDAP",
                                   [[ mainTester, exactTester('eduPersonAffiliation', 'student') ]])
 
         def createConteneur(key, name, description):
-            addGroup(hashStore, None, key, name, description, membersRegexTester)
+            addGroup(hashStore, None, businessCategoryKey(key), name, description, membersRegexTester)
 
 	# Création du conteneur d'UFR avec ses membres
-        addGroupMulti(hashStore, None, "personnels_composantes", "Composantes personnels", "Toutes les composantes de l'etablissement issues de LDAP", 
+        addGroupMulti(hashStore, None, businessCategoryKey("pedagogy"), "Composantes personnels", "Toutes les composantes de l'etablissement issues de LDAP", 
                       [[ membersRegexTester, 
                          regexTester('eduPersonAffiliation', inListRegex(personnelTypes)) ]])
 	
@@ -368,7 +403,7 @@ def createGroupsFrom_etape(hashStore, logger, ldp):
 
 		# Selon le type d'ou on détermine le type de groupe
 		# Création des groupes étapes
-                addGroup(hashStore, "etudiants_composante_"+ufr, "diploma_"+ou, description, description, 
+                addGroup(hashStore, etudiantsComposanteKey(ufr), "diploma_"+ou, description, description, 
                          exactTester('supannEtuEtape', uaiPrefix + ou))
 
 def createGroupsFrom_ou_groups(hashStore, logger, ldp):
@@ -402,7 +437,7 @@ def createGroupsFrom_ou_groups(hashStore, logger, ldp):
             if len(etapesParent) == 1:
                 parent = "diploma_" + etapesParent[0]
             elif len(composantesParent) == 1:
-                parent = "etudiants_composante_" + composantesParent[0]
+                parent = etudiantsComposanteKey(composantesParent[0])
             elif len(composantesParent) > 1:
                 exit(cn + ": can not handle case of multiple composantesParent " + repr(composantesParent))
             else:
