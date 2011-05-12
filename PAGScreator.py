@@ -316,10 +316,7 @@ def structureParent(businessCategory, supannCodeEntiteParent):
     if businessCategory == "pedagogy" or businessCategory == "research" or businessCategory == "library":
         return businessCategoryKey(businessCategory)
     elif businessCategory == "administration" :
-        if supannCodeEntiteParent != None and supannCodeEntiteParent != "UP1":
-            return structureKey(businessCategory, supannCodeEntiteParent)
-        else: 
-            return businessCategoryKey(businessCategory)
+        return businessCategoryKey(businessCategory)
     elif businessCategory == "council":
         # skip silently
         return None
