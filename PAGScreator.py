@@ -20,7 +20,8 @@ logFileName=sys.argv[4]+str(today)
 Config = ConfigParser.ConfigParser()
 Config.read(configFile)
 
-esup_portail  = Config.get('common', 'type') == "esup-portail"
+esup_portail  = re.search("esup-portail", Config.get('common', 'type'))
+esup_portail3 = re.search("esup-portail3", Config.get('common', 'type'))
 uaiPrefix     = Config.get('common', 'uaiPrefix')
 ldapServer    = Config.get('ldap', 'server')
 ldapUsername  = Config.get('ldap', 'username')
@@ -36,6 +37,8 @@ personnelDescription = {
 personnelTypes = personnelDescription.keys()
 
 attributeStringEqualsIgnoreCaseTester="org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester"
+
+membersRegexTester={ "placeholder": None }
 
 structuresDN = "ou=structures,"+baseDN
 
@@ -59,6 +62,19 @@ def configureLogger(logger):
     logger.addHandler(hdlr)
     logger.setLevel(logging.INFO)
 
+def regexFilterAndGetGroup(regex, n, l):
+    r = []
+    for e in l:
+        matches = re.match(regex, e)
+        if matches:
+            r.append(matches.group(n))
+    return r
+
+def regexFirstMatch(regex, s):
+    matches = re.match(regex, s)
+    if not matches:
+        exit('"' + s + '" is expected to match regex ' + regex)
+    return matches.group(1)
 
 def createNode(tag, children):
     node = doc.createElement(tag)
@@ -69,23 +85,45 @@ def createNode(tag, children):
 def createNodeWithText(tag, text):
     return createNode(tag, [doc.createTextNode(text)])
 
-def testerToTestNode(tester):
+def computeMembersRegexTester(membersList, keyForMsgs):
+    testValues = []
+    attribute_name = None
+    for elt in membersList:
+        if "mainTester" in elt:
+            test = elt["mainTester"]
+        else:
+            testers = elt["testers"]
+            if len(testers) != 1:
+                exit("expected only one test-group")
+            if len(testers[0]) != 1:
+                exit("expected only one test")
+            test = testers[0][0]
+
+        if attribute_name == None:
+            attribute_name = test["attribute-name"]
+        testValues.append(test["test-value"])
+
+        if test["tester-class"] != attributeStringEqualsIgnoreCaseTester:
+            exit("expected tester-class attributeStringEqualsIgnoreCaseTester on all members tester")
+        if attribute_name != test["attribute-name"]:
+            exit("expected same attribute-name on all members tester")
+
+    if attribute_name == None: exit("computeMembersRegexTester: excepted non-empty membersList for key " + keyForMsgs)
+
+    return regexTester(attribute_name, inListRegex(testValues))
+
+def testerToTestNode(tester, e):
+    if tester == membersRegexTester:
+        tester = computeMembersRegexTester(e["membersList"], e["raw_key"])
+
     attrs = [ createNodeWithText("attribute-name", tester["attribute-name"]),
               createNodeWithText("tester-class", tester["tester-class"]),
               createNodeWithText("test-value", tester["test-value"]) ]
     return createNode("test", attrs)
 
-def theKeys(l):
-    return [e["key"] for e in l]
-def attrVals(l):
-    return [e["attrVal"] for e in l]
-
 def inListRegex(l):
     vals = [re.escape(v) for v in l]
     return "^(" + "|".join(vals) + ")$"
-
-def oneOfAttrVals(l):
-    return inListRegex(attrVals(l))
 
 def tester(attribute_name, test_value, tester_class):
     return { "tester-class": tester_class, "attribute-name": attribute_name, "test-value": test_value }
@@ -97,29 +135,63 @@ def exactTester(attribute_name, test_value):
     return tester(attribute_name, test_value, "org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester")
 
 uuids = {}
-def checkUniqueRaw(key, typ, value):
+def checkUniqueRaw(e, typ):
     global uuids
+    value = e[typ]
     h = uuids.setdefault(typ, {})
-    if value in h: exit(("duplicate %s %s (conflicting keys: %s %s)" % (typ, value, key, h[value])).encode('utf-8'))
-    h[value] = key
+    if value in h: exit(("duplicate %s %s (conflicting keys: %s %s)" % (typ, value, e["raw_key"], h[value])).encode('utf-8'))
+    h[value] = e["raw_key"]
 
-def checkUnique(raw_key, key, name, description):
-    checkUniqueRaw(raw_key, "key", key)
-    checkUniqueRaw(raw_key, "name", name)
-    checkUniqueRaw(raw_key, "description", description)
+def checkUnique(e):
+    checkUniqueRaw(e, "key")
+    checkUniqueRaw(e, "name")
+    checkUniqueRaw(e, "description")
 
-def addGroup(groupStore, key, name, description, tester, membersList=None):
-    return addGroupMulti(groupStore, key, name, description, [[tester]], membersList)
+def addGroup(hashStore, parentKey, key, name, description, tester, moreOptions = {}):
+    addGroupMulti(hashStore, parentKey, key, name, description, [[tester]], moreOptions)
 
-def addGroupMulti(groupStore, raw_key, name, description, testers, membersList=None):
+def addGroupMulti(hashStore, parentKey, raw_key, name, description, testers, moreOptions = {}):
     # elimination des points "." dans les nomenclatures des key pour éviter une exception esup               
     key = raw_key.replace(".","_")
-    checkUnique(raw_key, key, name, description)
-    group = createGroupMulti(key, name, description, testers, membersList)
-    groupStore.appendChild(group)
-    return key
+    e = {
+        "raw_key": raw_key,
+        "key": key,
+        "parentKey": parentKey,
+        "name": name,
+        "description": description,
+        "testers": testers,
+        "hiddenIfLeaf": False, # default value
+        }
+    e.update(moreOptions)
 
-def createGroupMulti(key, name, description, testers, membersList):    
+    checkUnique(e)
+
+    hashStore[raw_key] = e
+
+def computeMembersList(hashStore):
+    for e in hashStore.itervalues():
+        e["membersList"] = []
+
+    for child in hashStore.itervalues():
+        if child["parentKey"] == None: continue
+        parentKey = child["parentKey"]
+        
+        if not parentKey in hashStore:
+            exit("parent key " + parentKey + " was used by " + child["key"] + " but it was not defined")
+
+        hashStore[parentKey]["membersList"].append(child)
+
+def handleDisplayIfNonLeaf(hashStore):
+    computeMembersList(hashStore)
+
+    for key, e in hashStore.items():
+
+        if e["hiddenIfLeaf"] and len(e["membersList"]) == 0:
+            #print "skipping leaf group", e["key"]
+            del hashStore[key]
+
+
+def createGroupMulti(e):
 	""" Création de groupes du type :
 	<group>
 		<group-key>1</group-key>
@@ -146,22 +218,22 @@ def createGroupMulti(key, name, description, testers, membersList):
 	</group>
 	"""
 
-        if "." in key:
+        if "." in e["key"]:
             exit("group-key " + key + " is invalid: it must not contain '.'")
 		
         testGroups = [
-            createNode("test-group", [ testerToTestNode(tester) for tester in andTesters ])
-            for andTesters in testers ]            
+            createNode("test-group", [ testerToTestNode(tester, e) for tester in andTesters ])
+            for andTesters in e["testers"] ]            
 
-	group = [ createNodeWithText("group-key", key),
-                  createNodeWithText("group-name", name),	
-                  createNodeWithText("group-description", description),
+	group = [ createNodeWithText("group-key", e["key"]),
+                  createNodeWithText("group-name", e["name"]),	
+                  createNodeWithText("group-description", e["description"]),
                   createNode("selection-test", testGroups) ]                           
 		
-	if membersList!=None and len(membersList) !=0:
+	if len(e["membersList"]) !=0:
 		members = []
-		for key in membersList:
-			members.append(createNodeWithText("member-key", key))
+		for child in e["membersList"]:
+			members.append(createNodeWithText("member-key", child["key"]))
 		group.append(createNode("members", members))
 
         return createNode("group", group)
@@ -174,7 +246,7 @@ def ldap_search(ldp, baseDN, retrieveAttributes, filter="(objectclass=*)"):
 
     for e in result_set: logger.debug( e[0][0] )
 
-    return [get_ldap_simple_values(e, retrieveAttributes) for e in result_set]
+    return [get_ldap_values(e, retrieveAttributes) for e in result_set]
 
 def get_ldap_results(ldp, ldap_result_id):
     result_set = []
@@ -186,137 +258,157 @@ def get_ldap_results(ldp, ldap_result_id):
             if result_type == ldap.RES_SEARCH_ENTRY:
                 result_set.append(result_data)
 
-def get_ldap_simple_value(ldapEntry, attr):
+def get_ldap_value(ldapEntry, attr):
     try:
-        return ldapEntry[0][1][attr][0].decode('utf-8')
+        l = [e.decode('utf-8') for e in ldapEntry[0][1][attr]]
+        if attr == "seeAlso":
+            return l
+        else:
+            if len(l) > 1: exit("attribute " + attr + " is multi-valued")
+            return l[0]
     except KeyError:
         return None
 
-def get_ldap_simple_values(ldapEntry, attrs):
-    return [get_ldap_simple_value(ldapEntry, attr) for attr in attrs] 
+def get_ldap_values(ldapEntry, attrs):
+    return [get_ldap_value(ldapEntry, attr) for attr in attrs] 
 
-def createGroupsFrom_structures(groupStore, logger, ldp):
-	result_set = ldap_search(ldp, structuresDN, ['supannCodeEntite','description','businessCategory']) 
+def createCommonRoots(hashStore):
+	# Création du conteneur d'étapes avec ses membres
+	addGroup(hashStore, None, "etudiants", u"Composantes (étudiants)", u"Toutes les groupes-étapes de l'établissement issus de LDAP", 
+                        regexTester("supannEtuEtape", ".*"))
 
-	members_composantes=[]
-        members_laboratoires=[]
-        members_services=[]
+def createGroupsFrom_structures(hashStore, logger, ldp):
+	result_set = ldap_search(ldp, structuresDN, ['supannCodeEntite','description','businessCategory','supannCodeEntiteParent']) 
 	
 	for ldapEntry in result_set :	
-		supannCodeEntite, description, businessCategory = ldapEntry
-		
-                subList=[]
-                simpleTester = exactTester('supannEntiteAffectation', supannCodeEntite)
-                testers = [[simpleTester]]
+		supannCodeEntite, description, businessCategory, supannCodeEntiteParent = ldapEntry
+
+                key="structure_"+supannCodeEntite
+                mainTester = exactTester('supannEntiteAffectation', supannCodeEntite)
+                testers = [[mainTester]]
 		
 		# Selon le type d'ou on détermine le type de groupe
 		# Création des groupes pour les services
 		if businessCategory == "pedagogy" :
-               		key="ufr_"+supannCodeEntite
-                        parent = members_composantes
+                        parent = 'personnels_composantes'
                         testers = []
-                        for typ in personnelTypes:
-                            tester = [ simpleTester, exactTester('eduPersonAffiliation', typ) ] 
-                            description_ = "Tous les " + personnelDescription[typ] + " de "+supannCodeEntite
-                            key_ = addGroupMulti(groupStore, key+"_"+typ, description_, description_, [tester])
-                            subList.append(key_)
+                        for typ, descr in personnelDescription.iteritems():
+                            tester = [ mainTester, exactTester('eduPersonAffiliation', typ) ] 
+                            description_ = "Tous les " + descr + " de "+supannCodeEntite
+                            addGroupMulti(hashStore, key, key+"_"+typ, description_, description_, [tester])
                             testers.append(tester)
 
-		# Création des groupes pour les labos
-		elif businessCategory == "research" :
-			key="research_center_"+supannCodeEntite
-			parent = members_laboratoires
-		# Création des groupes pour les services
-		else :
-			key="service_"+supannCodeEntite
-			parent = members_services
+		elif businessCategory == "research" or businessCategory == "library" :                    
+			parent = businessCategory
+		elif businessCategory == "administration" :
+                        parent = businessCategory
+                elif businessCategory == "council":
+                        # skip silently
+                        continue
+                else:
+                        print "skipping unknown businessCategory " + businessCategory
+                        continue
 
-                key = addGroupMulti(groupStore, key, description, description, testers, subList)
-                parent.append({ "attrVal": supannCodeEntite, "key": key })
+                addGroupMulti(hashStore, parent, key, description, description, testers, { "mainTester": mainTester })
 
-        def createConteneur(key, name, description, members):
-            tester = regexTester('supannEntiteAffectation', oneOfAttrVals(members))
-            addGroup(groupStore, key, name, description, tester, theKeys(members))
+                ### Création des conteneurs d'étapes pour les étudiants
+                addGroupMulti(hashStore, "etudiants", "etudiants_composante_"+supannCodeEntite, 
+                                  description + u" (étudiants)",
+                                  u"Toutes les étapes de la composante "+description+" issus de LDAP",
+                                  [[ mainTester, exactTester('eduPersonAffiliation', 'student') ]],
+                              { "hiddenIfLeaf": True })
+
+        def createConteneur(key, name, description):
+            addGroup(hashStore, None, key, name, description, membersRegexTester)
 
 	# Création du conteneur d'UFR avec ses membres
-	addGroupMulti(groupStore, "composantes", "LDAP Toutes les composantes", "Toutes les composantes de l'etablissement issues de LDAP", 
-                      [[ regexTester('supannEntiteAffectation', oneOfAttrVals(members_composantes)), 
-                         regexTester('eduPersonAffiliation', inListRegex(personnelTypes)) ]], 
-                      theKeys(members_composantes))
+        addGroupMulti(hashStore, None, "personnels_composantes", "Composantes personnels", "Toutes les composantes de l'etablissement issues de LDAP", 
+                      [[ membersRegexTester, 
+                         regexTester('eduPersonAffiliation', inListRegex(personnelTypes)) ]])
 	
-	# Création du conteneur de labos avec ses membres
-	createConteneur("laboratoires", "LDAP Tous les Laboratoires", "Tous les laboratoires de l'etablissement issus de LDAP", 
-                        members_laboratoires)
+	createConteneur("research", "Laboratoires de recherche", "Tous les laboratoires de l'etablissement issus de LDAP")
+
+	createConteneur("library", u"Bibliothèques", u"Toutes les bibliothèques de l'etablissement issus de LDAP")
 	
 	# Création du conteneur de services avec ses membres
-	createConteneur("services", "LDAP Tous les Services", "Tous les services de l'etablissement issu de LDAP", 
-                        members_services)
+	createConteneur("administration", "Services", "Tous les services de l'etablissement issu de LDAP")
 		
 
 # Création des groupes étapes, par UFR
-def createGroupsFrom_etape(groupStore, logger, ldp):
+def createGroupsFrom_etape(hashStore, logger, ldp):
 	result_set = ldap_search(ldp, etapesDN, ['ou','description','seeAlso'])
 
 	etapesByUfrList={}
 	
-	# On pourrait prendre la liste des ufr issue d'Harpège
-	ufrList=[]
-	
 	for ldapEntry in result_set :
 		ou, description, seeAlso = ldapEntry
 		
+                ufr = regexFirstMatch("^ou=([^,]*)", seeAlso[0])
+
 		# Selon le type d'ou on détermine le type de groupe
 		# Création des groupes étapes
-                key = addGroup(groupStore, "diploma_"+ou, description, description, 
+                addGroup(hashStore, "etudiants_composante_"+ufr, "diploma_"+ou, description, description, 
                          exactTester('supannEtuEtape', uaiPrefix + ou))
-                ufr = re.match("^ou=([^,]*)", seeAlso).group(1)
-		
-                #Liste des UFR contenant des diplômes
-                etapesByUfrList.setdefault(ufr, []).append(key)
-		
-		
-	ufrKeyList=[]		
-	for ufr in sorted(etapesByUfrList.keys()) :	
-                ou,description = ldap_search(ldp, structuresDN, ['ou','description'], "supannCodeEntite=" + ufr)[0]
 
-		### Création des conteneurs d'étapes par UFR
-		ufrKey = addGroup(groupStore, "diploma_composante_"+ufr, u"LDAP Toutes les étapes pour la composante "+description,
-                                  u"Toutes les étapes de la composante "+description+" issus de LDAP",
-                                  exactTester("supannEntiteAffectation", ufr), etapesByUfrList[ufr])
-                ufrKeyList.append(ufrKey)
-	
-	# Création du conteneur d'étapes avec ses membres
-	addGroup(groupStore, "diploma", u"LDAP Toutes les étapes", u"Toutes les groupes-étapes de l'établissement issus de LDAP", 
-                        regexTester("supannEtuEtape", ".*"), ufrKeyList)
-
-def createGroupsFrom_ou_groups(groupStore, logger, ldp):
-    groupsDN="ou=groups,"+baseDN
-    result_set = ldap_search(ldp, groupsDN, ['cn','description'])
+def createGroupsFrom_ou_groups(hashStore, logger, ldp):
             
-    matList=[]
-    ldapgroupsList=[]
+    # Création du conteneur des groupes LDAP avec ses membres
+    addGroup(hashStore, None, "ldapgroups", u"Groupes LDAP", u"Groupes LDAP dans la branche ou=groups", 
+             membersRegexTester)
+                            
+    # Création du conteneur des matières avec ses membres
+    addGroup(hashStore, None, "autres_matieres", u"Matières transverses", u"Matières sans composante principale", 
+             membersRegexTester)
+
+    groupsDN="ou=groups,"+baseDN
+    result_set = ldap_search(ldp, groupsDN, ['cn','description', 'seeAlso', 'ou'])
+
+    validGroups = {}
     for ldapEntry in result_set :                    
-        cn, description = ldapEntry
+        cn, description, seeAlso, ou = ldapEntry
+        validGroups[cn] = 1
+            
+    for ldapEntry in result_set :                    
+        cn, description, seeAlso, ou = ldapEntry
         if description == None: description = cn
                                     
         #si ce sont de matière le nom du groupe esup correspond à la description dans LDAP
         if re.match("^mati([0-9])*",cn) :
             name = description
-            parent = matList
+
+            composantesParent = regexFilterAndGetGroup("ou=([^,]*),ou=structures,.*", 1, seeAlso)
+            etapesParent = regexFilterAndGetGroup("ou=([^,]*),ou=[^,]*,ou=diploma,.*", 1, seeAlso)
+            if len(etapesParent) == 1:
+                parent = "diploma_" + etapesParent[0]
+            elif len(composantesParent) == 1:
+                parent = "etudiants_composante_" + composantesParent[0]
+            elif len(composantesParent) > 1:
+                exit(cn + ": can not handle case of multiple composantesParent " + repr(composantesParent))
+            else:
+                parent = "autres_matieres"
+        elif re.match("^gpelp\..*",cn) :
+            codeApogee = regexFirstMatch("^gpelp\.(.*)",cn)
+            name = ou + " (" + codeApogee + ")"
+            description = description + " (" + codeApogee + ")"
+            parent = regexFirstMatch("^cn=([^,]*)", seeAlso[0])
+            if not parent in validGroups:
+                #print "skipping group " + cn + " with unknown parent " + parent
+                continue
+        elif re.match("^gpetp.*",cn) :
+            codeApogee = regexFirstMatch("^gpetp\.(.*)",cn)
+            name = ou + " (gpetp-" + codeApogee + ")"
+            description = description + " (" + codeApogee + ")"
+            parent = "diploma_" + regexFirstMatch("^ou=([^,]*)", seeAlso[0])
         else:   
             name = cn              
-            parent = ldapgroupsList
+            parent = 'ldapgroups'
 
-        key = addGroup(groupStore, cn, name, description, exactTester('groups', cn))
-        parent.append({ "attrVal": cn, "key": key })            
-            
-    # Création du conteneur des groupes LDAP avec ses membres
-    addGroup(groupStore, "ldapgroups", u"Groupes LDAP", u"Groupes LDAP dans la branche ou=groups", 
-             regexTester('groups', oneOfAttrVals(ldapgroupsList)), theKeys(ldapgroupsList))
-                            
-    # Création du conteneur des matières avec ses membres
-    addGroup(groupStore, "matieres", u"LDAP Toutes les matières", u"Groupes étudiants par matière", 
-             regexTester('groups', '^mati.*'), theKeys(matList))
+        if esup_portail3:
+            tester = exactTester('memberOf', 'cn=' + cn + "," + groupsDN)
+        else:
+            tester = exactTester('groups', cn)
+
+        addGroup(hashStore, parent, cn, name, description, tester)
 
 logger = logging.getLogger()
 
@@ -342,9 +434,17 @@ try:
     doc = xml.dom.minidom.parse(inXmlFile)
     groupStore = doc.getElementsByTagName('Group-Store')[0]
 
-    createGroupsFrom_structures(groupStore, logger, ldp)
-    createGroupsFrom_etape(groupStore, logger, ldp)		
-    if esup_portail: createGroupsFrom_ou_groups(groupStore, logger, ldp)
+    hashStore = {}
+    createCommonRoots(hashStore)
+    createGroupsFrom_structures(hashStore, logger, ldp)
+    createGroupsFrom_etape(hashStore, logger, ldp)		
+    if esup_portail: createGroupsFrom_ou_groups(hashStore, logger, ldp)
+
+    handleDisplayIfNonLeaf(hashStore)
+
+    computeMembersList(hashStore)
+    for e in hashStore.itervalues():
+        groupStore.appendChild(createGroupMulti(e))
 
     write_to_file(doc, outXmlFile)
     checkAndIndent(outXmlFile)
