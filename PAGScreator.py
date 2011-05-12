@@ -398,10 +398,11 @@ def createGroupsFrom_etape(hashStore, logger, ldp):
 		ou, description, seeAlso = ldapEntry
 		
                 ufr = regexFirstMatch("^ou=([^,]*)", seeAlso[0])
+                name = u"Etape - " + description
 
 		# Selon le type d'ou on détermine le type de groupe
 		# Création des groupes étapes
-                addGroup(hashStore, etudiantsComposanteKey(ufr), "diploma_"+ou, description, description, 
+                addGroup(hashStore, etudiantsComposanteKey(ufr), "diploma_"+ou, name, description, 
                          exactTester('supannEtuEtape', uaiPrefix + ou))
 
 def createGroupsFrom_ou_groups(hashStore, logger, ldp):
@@ -428,7 +429,7 @@ def createGroupsFrom_ou_groups(hashStore, logger, ldp):
                                     
         #si ce sont de matière le nom du groupe esup correspond à la description dans LDAP
         if re.match("^mati([0-9])*",cn) :
-            name = description
+            name = u"Matière - " + description
 
             composantesParent = regexFilterAndGetGroup("ou=([^,]*),ou=structures,.*", 1, seeAlso)
             etapesParent = regexFilterAndGetGroup("ou=([^,]*),ou=[^,]*,ou=diploma,.*", 1, seeAlso)
@@ -450,7 +451,7 @@ def createGroupsFrom_ou_groups(hashStore, logger, ldp):
                 continue
         elif re.match("^gpetp.*",cn) :
             codeApogee = regexFirstMatch("^gpetp\.(.*)",cn)
-            name = ou + " (gpetp-" + codeApogee + ")"
+            name = u"Groupe - " + ou + " (gpetp-" + codeApogee + ")"
             description = description + " (" + codeApogee + ")"
             parent = "diploma_" + regexFirstMatch("^ou=([^,]*)", seeAlso[0])
         else:   
