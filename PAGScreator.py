@@ -100,7 +100,7 @@ uuids = {}
 def checkUniqueRaw(typ, value):
     global uuids
     h = uuids.setdefault(typ, {})
-    if value in h: exit("duplicate " + typ + " " + value)
+    if value in h: exit("duplicate " + typ + " " + value.encode('utf-8'))
     h[value] = 1
 
 def checkUnique(key, name, description):
