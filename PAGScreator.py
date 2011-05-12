@@ -275,17 +275,17 @@ def createGroupsFrom_etape(groupStore, logger, ldp):
                 etapesByUfrList.setdefault(ufr, []).append(key)
 		
 		
+	ufrKeyList=[]		
 	for ufr in sorted(etapesByUfrList.keys()) :	
                 ou,description = ldap_search(ldp, structuresDN, ['ou','description'], "supannCodeEntite=" + ufr)[0]
 
 		### Création des conteneurs d'étapes par UFR
-		addGroup(groupStore, "diploma_composante_"+ufr, u"LDAP Toutes les étapes pour la composante "+description,
-                         u"Toutes les étapes de la composante "+description+" issus de LDAP",
-                         exactTester("supannEntiteAffectation", ufr), etapesByUfrList[ufr])
+		ufrKey = addGroup(groupStore, "diploma_composante_"+ufr, u"LDAP Toutes les étapes pour la composante "+description,
+                                  u"Toutes les étapes de la composante "+description+" issus de LDAP",
+                                  exactTester("supannEntiteAffectation", ufr), etapesByUfrList[ufr])
+                ufrKeyList.append(ufrKey)
 	
 	# Création du conteneur d'étapes avec ses membres
-	ufrKeyList=["diploma_composante_"+ufr for ufr in ufrList]
-		
 	addGroup(groupStore, "diploma", u"LDAP Toutes les étapes", u"Toutes les groupes-étapes de l'établissement issus de LDAP", 
                         regexTester("supannEtuEtape", ".*"), ufrKeyList)
 
