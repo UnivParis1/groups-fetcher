@@ -301,7 +301,10 @@ def createGroupsFrom_structures(hashStore, logger, ldp):
 		elif businessCategory == "research" or businessCategory == "library" :                    
 			parent = businessCategory
 		elif businessCategory == "administration" :
-                        parent = businessCategory
+                        if supannCodeEntiteParent != None and supannCodeEntiteParent != "UP1":
+                            parent = "structure_" + supannCodeEntiteParent
+                        else: 
+                            parent = businessCategory
                 elif businessCategory == "council":
                         # skip silently
                         continue
