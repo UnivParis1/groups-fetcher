@@ -29,8 +29,8 @@ baseDN        = Config.get('ldap', 'baseDN')
 etapesDN      = Config.get('ldap', 'etapesDN')
 
 personnelDescription = {
-    'employee': 'personnels administratifs et techniques', 
-    'research': 'chercheurs', 
+    'staff': 'personnels administratifs et techniques', 
+    'researcher': 'chercheurs', 
     'teacher' : 'enseignants',
     }
 personnelTypes = personnelDescription.keys()
