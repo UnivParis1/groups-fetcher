@@ -97,24 +97,24 @@ def exactTester(attribute_name, test_value):
     return tester(attribute_name, test_value, "org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester")
 
 uuids = {}
-def checkUniqueRaw(typ, value):
+def checkUniqueRaw(key, typ, value):
     global uuids
     h = uuids.setdefault(typ, {})
-    if value in h: exit("duplicate " + typ + " " + value.encode('utf-8'))
-    h[value] = 1
+    if value in h: exit(("duplicate %s %s (conflicting keys: %s %s)" % (typ, value, key, h[value])).encode('utf-8'))
+    h[value] = key
 
-def checkUnique(key, name, description):
-    checkUniqueRaw("key", key)
-    checkUniqueRaw("name", name)
-    checkUniqueRaw("description", description)
+def checkUnique(raw_key, key, name, description):
+    checkUniqueRaw(raw_key, "key", key)
+    checkUniqueRaw(raw_key, "name", name)
+    checkUniqueRaw(raw_key, "description", description)
 
 def addGroup(groupStore, key, name, description, tester, membersList=None):
     return addGroupMulti(groupStore, key, name, description, [[tester]], membersList)
 
-def addGroupMulti(groupStore, key, name, description, testers, membersList=None):
+def addGroupMulti(groupStore, raw_key, name, description, testers, membersList=None):
     # elimination des points "." dans les nomenclatures des key pour éviter une exception esup               
-    key = key.replace(".","_")
-    checkUnique(key, name, description)
+    key = raw_key.replace(".","_")
+    checkUnique(raw_key, key, name, description)
     group = createGroupMulti(key, name, description, testers, membersList)
     groupStore.appendChild(group)
     return key
