@@ -1,0 +1,10 @@
+[common]
+uaiPrefix = {UAI:0751717J}
+type = esup-portail2
+
+[ldap]
+server = ldap.univ-paris1.fr
+username = cn=xxx,ou=admin,dc=univ-paris1,dc=fr
+password = xxx
+baseDN = dc=univ-paris1,dc=fr
+etapesDN = ou=2010,ou=diploma,o=Paris1,dc=univ-paris1,dc=fr

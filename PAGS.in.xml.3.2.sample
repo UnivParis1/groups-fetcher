@@ -1,0 +1,259 @@
+<?xml version="1.0"?>
+
+<!--
+    PAGSGroupStoreConfig.xml is used to configure the person attributes group store.
+    See PAGSGroupStore.dtd for xml grammar.
+    
+    To control the attributes that are available, see ../PersonDirs.xml.
+    
+    Author: Dan Ellentuck, de3@columbia.edu
+    Version $Revision: 1.2 $
+    
+    
+    -->
+
+
+<Group-Store>
+<!--
+  Group pags_root: "PAGS Root"
+  IMPORTANT: The PAGS Root group is REQUIRED for uPortal to function. It Must be a member of the Everyone group 
+in the
+  local group store
+-->
+  <group>
+    <group-key>pags_root</group-key>
+    <group-name>PAGS Root</group-name>
+    <group-description>Root group for all PAGS groups.  Convenience for adding PAGS groups to a local group.</group-description>
+    <members>
+      <member-key>all_users</member-key>
+    </members>
+  </group>
+
+
+<!--
+  Group all_users: "All Users (PAGS)"
+  All IPersons are memebers of this group
+  IMPORTANT: The All Users group is REQUIRED for uPortal to function. It Must be a member of the PAGS Root group
+-->
+  <group>
+    <group-key>all_users</group-key>
+    <group-name>All Users (PAGS)</group-name>
+    <group-description>All Portal Users</group-description>
+    <selection-test>
+      <test-group>
+        <test>
+          <attribute-name></attribute-name>
+          <tester-class>org.jasig.portal.groups.pags.testers.AlwaysTrueTester</tester-class>
+          <test-value></test-value>
+        </test>
+      </test-group>
+    </selection-test>
+  </group>
+ 
+	
+	<group>
+		<group-key>TousPers</group-key>
+		<group-name>LDAP Tout le personnel</group-name>
+		<group-description>Tout le personnel de l'etablissement issu de LDAP</group-description>
+		<selection-test>
+			<test-group>
+				<test>
+					<attribute-name>eduPersonAffiliation</attribute-name>
+					<tester-class>org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+					<test-value>faculty</test-value>
+				</test>
+			</test-group>
+			<test-group>
+				<test>
+					<attribute-name>eduPersonAffiliation</attribute-name>
+					<tester-class>org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+					<test-value>staff</test-value>
+				</test>
+			</test-group>
+			<test-group>
+				<test>
+					<attribute-name>eduPersonAffiliation</attribute-name>
+					<tester-class>org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+					<test-value>employee</test-value>
+				</test>
+			</test-group>
+			<test-group>
+				<test>
+					<attribute-name>eduPersonAffiliation</attribute-name>
+					<tester-class>org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+					<test-value>researcher</test-value>
+				</test>
+			</test-group>
+			<test-group>
+				<test>
+					<attribute-name>eduPersonAffiliation</attribute-name>
+					<tester-class>org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+					<test-value>emeritus</test-value>
+				</test>
+			</test-group>
+		</selection-test>
+	</group>
+	
+	<group>
+		<group-key>TousEtud</group-key>
+		<group-name>LDAP Tous les etudiants</group-name>
+		<group-description>Tous les etudiants de l'etablissement issus de LDAP</group-description>
+		<selection-test>
+			<test-group>
+				<test>
+					<attribute-name>eduPersonAffiliation</attribute-name>
+					<tester-class>org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+					<test-value>student</test-value>
+				</test>
+			</test-group>
+		</selection-test>
+	</group>
+	
+	<group>
+		<group-key>TousEns</group-key>
+		<group-name>LDAP Tous les enseignants</group-name>
+		<group-description>Tous les enseignants de l'etablissement issus de LDAP</group-description>
+		<selection-test>
+			<test-group>
+				<test>
+					<attribute-name>eduPersonAffiliation</attribute-name>
+					<tester-class>org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+					<test-value>faculty</test-value>
+				</test>
+			</test-group>
+		</selection-test>
+	</group>
+	
+	<group>
+		<group-key>TousCher</group-key>
+		<group-name>LDAP Tous les chercheurs</group-name>
+		<group-description>Tous les chercheurs de l'etablissement issus de LDAP</group-description>
+		<selection-test>
+			<test-group>
+				<test>
+					<attribute-name>eduPersonAffiliation</attribute-name>
+					<tester-class>org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+					<test-value>researcher</test-value>
+				</test>
+			</test-group>
+		</selection-test>
+	</group>
+
+	<group>
+		<group-key>TousEme</group-key>
+		<group-name>LDAP Tous les professeurs émérites</group-name>
+		<group-description>Tous les professeurs émérites de l'etablissement issus de LDAP</group-description>
+		<selection-test>
+			<test-group>
+				<test>
+					<attribute-name>eduPersonAffiliation</attribute-name>
+					<tester-class>org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+					<test-value>emeritus</test-value>
+				</test>
+			</test-group>
+		</selection-test>
+	</group>
+
+	<group>
+		<group-key>TousBiatos</group-key>
+		<group-name>LDAP Tous les BIATOS</group-name>
+		<group-description>Tous les BIATOS de l'etablissement issus de LDAP</group-description>
+		<selection-test>
+			<test-group>
+				<test>
+					<attribute-name>eduPersonAffiliation</attribute-name>
+					<tester-class>org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+					<test-value>employee</test-value>
+				</test>
+			</test-group>
+			<test-group>
+				<test>
+					<attribute-name>eduPersonAffiliation</attribute-name>
+					<tester-class>org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+					<test-value>staff</test-value>
+				</test>
+			</test-group>
+		</selection-test>
+	</group>
+
+	<group>
+		<group-key>TousInvites</group-key>
+		<group-name>LDAP Tous les invites</group-name>
+		<group-description>Tous les invites de l'etablissement issus de LDAP</group-description>
+		<selection-test>
+			<test-group>
+				<test>
+					<attribute-name>eduPersonAffiliation</attribute-name>
+					<tester-class>org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+					<test-value>affiliate</test-value>
+				</test>
+			</test-group>
+		</selection-test>
+	</group>	    	   
+ 
+	<group>
+		<group-key>TousAnciens</group-key>
+		<group-name>LDAP Tous les anciens</group-name>
+		<group-description>Tous les anciens de l'etablissement issus de LDAP</group-description>
+		<selection-test>
+			<test-group>
+				<test>
+					<attribute-name>eduPersonAffiliation</attribute-name>
+					<tester-class>org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+					<test-value>alum</test-value>
+				</test>
+			</test-group>
+		</selection-test>
+	</group>
+
+	<group>
+		<group-key>TousRetraite</group-key>
+		<group-name>LDAP Tous les retraités</group-name>
+		<group-description>Tous les retraités de l'etablissement issus de LDAP</group-description>
+		<selection-test>
+			<test-group>
+				<test>
+					<attribute-name>eduPersonAffiliation</attribute-name>
+					<tester-class>org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+					<test-value>retired</test-value>
+				</test>
+			</test-group>
+		</selection-test>
+	</group>
+
+	 <group>
+    		<group-key>Defaut</group-key>
+		<group-name>Defaut</group-name>
+		<group-description>Personne ayant un compte Paris 1</group-description>
+		<selection-test>
+		      <test-group>
+		        <test>
+		          <attribute-name>uid</attribute-name>
+		          <tester-class>org.jasig.portal.groups.pags.testers.RegexTester</tester-class>
+		          <test-value>.+</test-value>
+		        </test>
+		      </test-group>
+		</selection-test>
+	 </group>
+
+         <group>
+                <group-key>EnsLangues</group-key>
+                <group-name>LDAP Tous les enseignants en langues</group-name>
+                <group-description>Tous les enseignants du service SGEL</group-description>
+                <selection-test>
+                        <test-group>
+                                <test>
+                                        <attribute-name>eduPersonAffiliation</attribute-name>
+                                        <tester-class>org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+                                        <test-value>faculty</test-value>
+                                </test>
+				<test>
+				        <attribute-name>esupEtuFormation</attribute-name>
+				        <tester-class>org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+				        <test-value>ou=SX5,ou=structures,o=Paris1,dc=univ-paris1,dc=fr</test-value>
+			        </test>
+                        </test-group>
+                </selection-test>
+        </group>
+
+</Group-Store>

@@ -1,0 +1,3 @@
+here=`dirname $0`
+out=/webhome/www/html/typo3conf/ext/oxcs_shibboleth/cron/shibbolethGroups.xml
+./PAGScreator.py shibbolethGroupsGenerator.ini $here/shibbolethGroups.in.xml $out /var/log/shibboleth/shibbolethGroupsGenerator.log.
