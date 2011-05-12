@@ -160,13 +160,18 @@ def addGroupMulti(hashStore, parentKey, raw_key, name, description, testers, mor
         "name": name,
         "description": description,
         "testers": testers,
-        "hiddenIfLeaf": False, # default value
         }
     e.update(moreOptions)
 
     checkUnique(e)
 
     hashStore[raw_key] = e
+
+def computeNeededParents(hashStore):
+    h = {}
+    for child in hashStore.itervalues():
+        h[child["parentKey"]] = None
+    return h
 
 def computeMembersList(hashStore):
     for e in hashStore.itervalues():
@@ -180,16 +185,6 @@ def computeMembersList(hashStore):
             exit("parent key " + parentKey + " was used by " + child["key"] + " but it was not defined")
 
         hashStore[parentKey]["membersList"].append(child)
-
-def handleDisplayIfNonLeaf(hashStore):
-    computeMembersList(hashStore)
-
-    for key, e in hashStore.items():
-
-        if e["hiddenIfLeaf"] and len(e["membersList"]) == 0:
-            #print "skipping leaf group", e["key"]
-            del hashStore[key]
-
 
 def createGroupMulti(e):
 	""" Création de groupes du type :
@@ -277,49 +272,72 @@ def createCommonRoots(hashStore):
 	addGroup(hashStore, None, "etudiants", u"Composantes (étudiants)", u"Toutes les groupes-étapes de l'établissement issus de LDAP", 
                         regexTester("supannEtuEtape", ".*"))
 
-def createGroupsFrom_structures(hashStore, logger, ldp):
+def structureParent(businessCategory, supannCodeEntiteParent):
+    # Selon le type d'ou on détermine le type de groupe
+    # Création des groupes pour les services
+    if businessCategory == "pedagogy" :
+        return 'personnels_composantes'
+    elif businessCategory == "research" or businessCategory == "library" :                    
+        return businessCategory
+    elif businessCategory == "administration" :
+        if supannCodeEntiteParent != None and supannCodeEntiteParent != "UP1":
+            return "structure_" + supannCodeEntiteParent
+        else: 
+            return businessCategory
+    elif businessCategory == "council":
+        # skip silently
+        return None
+    else:
+        print "skipping unknown businessCategory " + businessCategory
+        return None
+
+def addSubGroupsForEachPersonnel(composanteKey, supannCodeEntite, mainTester):
+    testers = []
+    for typ, descr in personnelDescription.iteritems():
+        tester = [ mainTester, exactTester('eduPersonAffiliation', typ) ] 
+        description_ = "Tous les " + descr + " de "+supannCodeEntite
+        addGroupMulti(hashStore, composanteKey, composanteKey+"_"+typ, description_, description_, [tester])
+        testers.append(tester)
+    return testers
+
+
+def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
 	result_set = ldap_search(ldp, structuresDN, ['supannCodeEntite','description','businessCategory','supannCodeEntiteParent']) 
 	
 	for ldapEntry in result_set :	
 		supannCodeEntite, description, businessCategory, supannCodeEntiteParent = ldapEntry
 
+                isPedagogy = "etudiants_composante_"+supannCodeEntite in neededParents
                 key="structure_"+supannCodeEntite
                 mainTester = exactTester('supannEntiteAffectation', supannCodeEntite)
-                testers = [[mainTester]]
-		
-		# Selon le type d'ou on détermine le type de groupe
-		# Création des groupes pour les services
-		if businessCategory == "pedagogy" :
-                        parent = 'personnels_composantes'
-                        testers = []
-                        for typ, descr in personnelDescription.iteritems():
-                            tester = [ mainTester, exactTester('eduPersonAffiliation', typ) ] 
-                            description_ = "Tous les " + descr + " de "+supannCodeEntite
-                            addGroupMulti(hashStore, key, key+"_"+typ, description_, description_, [tester])
-                            testers.append(tester)
 
-		elif businessCategory == "research" or businessCategory == "library" :                    
-			parent = businessCategory
-		elif businessCategory == "administration" :
-                        if supannCodeEntiteParent != None and supannCodeEntiteParent != "UP1":
-                            parent = "structure_" + supannCodeEntiteParent
-                        else: 
-                            parent = businessCategory
-                elif businessCategory == "council":
-                        # skip silently
-                        continue
+                parent = structureParent(businessCategory, supannCodeEntiteParent)
+                if parent == None: continue
+
+		if isPedagogy and businessCategory != "pedagogy":
+                    composanteKey = key + "_composante"
                 else:
-                        print "skipping unknown businessCategory " + businessCategory
-                        continue
+                    composanteKey = key
+
+                if isPedagogy or businessCategory == "pedagogy":
+                    testers = addSubGroupsForEachPersonnel(composanteKey, supannCodeEntite, mainTester)
+                else:
+                    testers = [[mainTester]]
 
                 addGroupMulti(hashStore, parent, key, description, description, testers, { "mainTester": mainTester })
 
-                ### Création des conteneurs d'étapes pour les étudiants
-                addGroupMulti(hashStore, "etudiants", "etudiants_composante_"+supannCodeEntite, 
+		if composanteKey != key:
+                        # duplicate the structure which is both pedagogy and something else
+                        parent = 'personnels_composantes'
+                        description_ = description + " (composante)"
+                        addGroupMulti(hashStore, parent, composanteKey, description_, description_, testers, { "mainTester": mainTester })
+
+                if isPedagogy:
+                    ### Création des conteneurs d'étapes pour les étudiants
+                    addGroupMulti(hashStore, "etudiants", "etudiants_composante_"+supannCodeEntite, 
                                   description + u" (étudiants)",
                                   u"Toutes les étapes de la composante "+description+" issus de LDAP",
-                                  [[ mainTester, exactTester('eduPersonAffiliation', 'student') ]],
-                              { "hiddenIfLeaf": True })
+                                  [[ mainTester, exactTester('eduPersonAffiliation', 'student') ]])
 
         def createConteneur(key, name, description):
             addGroup(hashStore, None, key, name, description, membersRegexTester)
@@ -439,11 +457,10 @@ try:
 
     hashStore = {}
     createCommonRoots(hashStore)
-    createGroupsFrom_structures(hashStore, logger, ldp)
     createGroupsFrom_etape(hashStore, logger, ldp)		
     if esup_portail: createGroupsFrom_ou_groups(hashStore, logger, ldp)
-
-    handleDisplayIfNonLeaf(hashStore)
+    neededParents = computeNeededParents(hashStore) # must be done after getting etapes and groups
+    createGroupsFrom_structures(hashStore, logger, ldp, neededParents)
 
     computeMembersList(hashStore)
     for e in hashStore.itervalues():
