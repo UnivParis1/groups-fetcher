@@ -28,7 +28,7 @@ ldapUsername  = Config.get('ldap', 'username')
 ldapPassword  = Config.get('ldap', 'password')
 baseDN        = Config.get('ldap', 'baseDN')
 etapesDN      = Config.get('ldap', 'etapesDN')
-oldKeys       = not esup_portail3
+oldKeys       = True
 
 personnelDescription = {
     'staff': 'personnels administratifs et techniques', 
