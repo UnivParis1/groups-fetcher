@@ -317,7 +317,7 @@ def get_ldap_values(ldapEntry, attrs):
 def createCommonRoots(hashStore):
 	# Création du conteneur d'étapes avec ses membres
 	addGroup(hashStore, None, etudiantsKey(), u"Composantes (étudiants)", u"Toutes les groupes-étapes de l'établissement issus de LDAP", 
-                        regexTester("supannEtuEtape", ".*"))
+                        regexTester("supannEtuEtape", ".+"))
 
 def structureParent(businessCategory, supannCodeEntiteParent):
     # Selon le type d'ou on détermine le type de groupe
