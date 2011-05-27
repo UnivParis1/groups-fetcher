@@ -22,6 +22,7 @@ Config.read(configFile)
 
 esup_portail  = re.search("esup-portail", Config.get('common', 'type'))
 esup_portail3 = re.search("esup-portail3", Config.get('common', 'type'))
+typo3         = re.search("typo3", Config.get('common', 'type'))
 uaiPrefix     = Config.get('common', 'uaiPrefix')
 ldapServer    = Config.get('ldap', 'server')
 ldapUsername  = Config.get('ldap', 'username')
@@ -42,6 +43,12 @@ attributeStringEqualsIgnoreCaseTester="org.jasig.portal.groups.pags.testers.Stri
 membersRegexTester={ "placeholder": None }
 
 structuresDN = "ou=structures,"+baseDN
+
+typo3attrs = {
+    'eduPersonAffiliation': 'HTTP_SHIB_EP_UNSCOPEDAFFILIATION',
+    'supannEtuEtape': 'HTTP_SHIB_SUPANN_SUPANNETUETAPE',
+    'supannEntiteAffectation': 'HTTP_SHIB_SUPANN_SUPANNENTITEAFFECTATION',
+}
 
 timeout=0
 
@@ -164,6 +171,8 @@ def inListRegex(l):
     return "^(" + "|".join(vals) + ")$"
 
 def tester(attribute_name, test_value, tester_class):
+    if typo3 and not attribute_name.startswith("HTTP_SHIB_"):
+        attribute_name = typo3attrs[attribute_name]
     return { "tester-class": tester_class, "attribute-name": attribute_name, "test-value": test_value }
 
 def regexTester(attribute_name, test_value):
