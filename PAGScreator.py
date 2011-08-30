@@ -421,8 +421,8 @@ def createGroupsFrom_ou_groups(hashStore, logger, ldp):
              membersRegexTester)
                             
     # Création du conteneur des matières avec ses membres
-    addGroup(hashStore, None, "autres_matieres", u"Matières transverses", u"Matières sans composante principale", 
-             membersRegexTester)
+    #addGroup(hashStore, None, "autres_matieres", u"Matières transverses", u"Matières sans composante principale", 
+    #         membersRegexTester)
 
     groupsDN="ou=groups,"+baseDN
     result_set = ldap_search(ldp, groupsDN, ['cn','description', 'seeAlso', 'ou'])
@@ -449,7 +449,8 @@ def createGroupsFrom_ou_groups(hashStore, logger, ldp):
             elif len(composantesParent) > 1:
                 exit(cn + ": can not handle case of multiple composantesParent " + repr(composantesParent))
             else:
-                parent = "autres_matieres"
+                exit("autres_matieres n'est plus vide")
+                #parent = "autres_matieres"
         elif re.match("^gpelp\..*",cn) :
             codeApogee = regexFirstMatch("^gpelp\.(.*)",cn)
             name = ou + " (" + codeApogee + ")"
