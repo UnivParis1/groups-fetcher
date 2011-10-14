@@ -52,6 +52,9 @@ typo3attrs = {
 
 timeout=0
 
+class EmptyMembersList(Exception):
+    pass
+
 def etudiantsKey():
     if oldKeys:
         return "diploma"
@@ -130,7 +133,7 @@ def createNode(tag, children):
 def createNodeWithText(tag, text):
     return createNode(tag, [doc.createTextNode(text)])
 
-def computeMembersRegexTester(membersList, keyForMsgs):
+def computeMembersRegexTester(membersList):
     testValues = []
     attribute_name = None
     for elt in membersList:
@@ -153,13 +156,13 @@ def computeMembersRegexTester(membersList, keyForMsgs):
         if attribute_name != test["attribute-name"]:
             exit("expected same attribute-name on all members tester")
 
-    if attribute_name == None: exit("computeMembersRegexTester: excepted non-empty membersList for key " + keyForMsgs)
+    if attribute_name == None: raise EmptyMembersList
 
     return regexTester(attribute_name, inListRegex(testValues))
 
 def testerToTestNode(tester, e):
     if tester == membersRegexTester:
-        tester = computeMembersRegexTester(e["membersList"], e["raw_key"])
+        tester = computeMembersRegexTester(e["membersList"])
 
     attrs = [ createNodeWithText("attribute-name", tester["attribute-name"]),
               createNodeWithText("tester-class", tester["tester-class"]),
@@ -207,6 +210,7 @@ def addGroupMulti(hashStore, parentKey, raw_key, name, description, testers, mor
         "name": name,
         "description": description,
         "testers": testers,
+        "skipIfEmpty": False,
         }
     e.update(moreOptions)
 
@@ -422,7 +426,7 @@ def createGroupsFrom_ou_groups(hashStore, logger, ldp):
                             
     # Création du conteneur des matières avec ses membres
     addGroup(hashStore, None, "autres_matieres", u"Matières transverses", u"Matières sans composante principale", 
-             membersRegexTester)
+             membersRegexTester, { "skipIfEmpty": True })
 
     groupsDN="ou=groups,"+baseDN
     result_set = ldap_search(ldp, groupsDN, ['cn','description', 'seeAlso', 'ou'])
@@ -512,8 +516,13 @@ try:
 
     computeMembersList(hashStore)
     for e in hashStore.itervalues():
-        groupStore.appendChild(createGroupMulti(e))
-
+        try:
+            groupStore.appendChild(createGroupMulti(e))
+        except EmptyMembersList:
+            logger.warn("expected non-empty membersList for " + e["raw_key"])
+            if not e["skipIfEmpty"]:
+                exit("expected non-empty membersList for " + e["raw_key"])
+ 
     write_to_file(doc, outXmlFile)
     checkAndIndent(outXmlFile)
 		
