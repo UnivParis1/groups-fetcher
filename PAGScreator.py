@@ -20,6 +20,12 @@ logFileName=sys.argv[4]+str(today)
 Config = ConfigParser.ConfigParser()
 Config.read(configFile)
 
+def safeConfigGet(section, option):
+    if Config.has_option(section, option):
+        return Config.get(section, option)
+    else:
+        return ""
+
 esup_portail  = re.search("esup-portail", Config.get('common', 'type'))
 esup_portail3 = re.search("esup-portail3", Config.get('common', 'type'))
 typo3         = re.search("typo3", Config.get('common', 'type'))
@@ -29,6 +35,7 @@ ldapUsername  = Config.get('ldap', 'username')
 ldapPassword  = Config.get('ldap', 'password')
 baseDN        = Config.get('ldap', 'baseDN')
 etapesDN      = Config.get('ldap', 'etapesDN')
+restrictIdp   = safeConfigGet('common', 'restrictIdp')
 oldKeys       = True
 
 personnelDescription = {
@@ -48,6 +55,7 @@ typo3attrs = {
     'eduPersonAffiliation': 'HTTP_SHIB_EP_UNSCOPEDAFFILIATION',
     'supannEtuEtape': 'HTTP_SHIB_SUPANN_SUPANNETUETAPE',
     'supannEntiteAffectation': 'HTTP_SHIB_SUPANN_SUPANNENTITEAFFECTATION',
+    'Shib-Identity-Provider': 'Shib-Identity-Provider',
 }
 
 timeout=0
@@ -284,6 +292,11 @@ def createGroupMulti(e):
 
         return createNode("group", group)
 
+def restrictOnIdp(idp):
+    test_idp = exactTester("Shib-Identity-Provider", idp)
+    for andTesters in e["testers"]:
+        andTesters.append(test_idp)
+
 def ldap_search(ldp, baseDN, retrieveAttributes, filter="(objectclass=*)"):
     ldap_result_id = ldp.search(baseDN, ldap.SCOPE_ONELEVEL, filter, retrieveAttributes) 
     result_set = get_ldap_results(ldp, ldap_result_id)
@@ -518,6 +531,7 @@ try:
     computeMembersList(hashStore)
     for e in hashStore.itervalues():
         try:
+            if restrictIdp: restrictOnIdp(restrictIdp)
             groupStore.appendChild(createGroupMulti(e))
         except EmptyMembersList:
             logger.warn("expected non-empty membersList for " + e["raw_key"])
