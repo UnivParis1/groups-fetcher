@@ -53,6 +53,7 @@ structuresDN = "ou=structures,"+baseDN
 
 typo3attrs = {
     'eduPersonAffiliation': 'HTTP_SHIB_EP_UNSCOPEDAFFILIATION',
+    'eduPersonOrgUnitDN': 'HTTP_SHIB_EP_ORGUNITDN',
     'supannEtuEtape': 'HTTP_SHIB_SUPANN_SUPANNETUETAPE',
     'supannEntiteAffectation': 'HTTP_SHIB_SUPANN_SUPANNENTITEAFFECTATION',
     'Shib-Identity-Provider': 'Shib-Identity-Provider',
@@ -184,6 +185,8 @@ def inListRegex(l):
 def tester(attribute_name, test_value, tester_class):
     if typo3 and not attribute_name.startswith("HTTP_SHIB_"):
         attribute_name = typo3attrs[attribute_name]
+    if esup_portail and not esup_portail3 and attribute_name == "eduPersonOrgUnitDN":
+        attribute_name = "esupEtuFormation"
     return { "tester-class": tester_class, "attribute-name": attribute_name, "test-value": test_value }
 
 def regexTester(attribute_name, test_value):
@@ -429,7 +432,7 @@ def createGroupsFrom_etape(hashStore, logger, ldp):
 		# Selon le type d'ou on détermine le type de groupe
 		# Création des groupes étapes
                 addGroup(hashStore, etudiantsComposanteKey(ufr), "diploma_"+ou, name, description, 
-                         exactTester('supannEtuEtape', uaiPrefix + ou))
+                         exactTester('eduPersonOrgUnitDN', "ou=" + ou + "," + etapesDN))
 
 def createGroupsFrom_ou_groups(hashStore, logger, ldp):
             
