@@ -36,6 +36,7 @@ ldapPassword  = Config.get('ldap', 'password')
 baseDN        = Config.get('ldap', 'baseDN')
 etapesDN      = Config.get('ldap', 'etapesDN')
 restrictIdp   = safeConfigGet('common', 'restrictIdp')
+renamedGroupKeysFile = safeConfigGet('common', 'renamedGroupKeysFile')
 oldKeys       = True
 
 personnelDescription = {
@@ -228,6 +229,41 @@ def addGroupMulti(hashStore, parentKey, raw_key, name, description, testers, mor
     checkUnique(e)
 
     hashStore[raw_key] = e
+
+def handleRenamedGroupKeys(hashStore):
+    def readFile():
+        m = {}
+        for line in open(renamedGroupKeysFile):
+            if re.match("^\s*(#|$)", line): continue
+            try:
+                oldK, newK = line.rstrip().split(' ')
+            except ValueError:
+                exit(renamedGroupKeysFile + ": invalid line: " + line)
+            m.setdefault(oldK, []).append(newK)
+            m.setdefault(newK, []).append(oldK)
+        return m
+
+    def cloneGroup(newK, groups):
+        def computeText(field):
+            suffix = " (" + newK + ")"
+            return u" + ".join(set([ g[field] for g in groups ])) + suffix
+
+        addGroupMulti(hashStore, None, newK,
+                      computeText("name"),
+                      computeText("description"),
+                      sum([ g["testers"] for g in groups ], []))
+
+    if not renamedGroupKeysFile: return
+
+    renamings = readFile()
+
+    for newK, oldKeys in renamings.iteritems():
+        if not (newK in hashStore):
+            try:
+                existingGroups = [ hashStore[k] for k in oldKeys ]
+                cloneGroup(newK, existingGroups)
+            except KeyError:
+                logger.error("skipping " + newK + " which depends on unknown " + str(oldKeys))
 
 def computeNeededParents(hashStore):
     h = {}
@@ -531,6 +567,7 @@ try:
     neededParents = computeNeededParents(hashStore) # must be done after getting etapes and groups
     createGroupsFrom_structures(hashStore, logger, ldp, neededParents)
 
+    handleRenamedGroupKeys(hashStore)
     computeMembersList(hashStore)
     for e in hashStore.itervalues():
         try:
