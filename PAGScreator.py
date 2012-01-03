@@ -279,10 +279,12 @@ def computeMembersList(hashStore):
         if child["parentKey"] == None: continue
         parentKey = child["parentKey"]
         
-        if not parentKey in hashStore:
-            exit("parent key " + parentKey + " was used by " + child["key"] + " but it was not defined")
+        if parentKey in hashStore:
+            hashStore[parentKey]["membersList"].append(child)
+        else:
+            del child["parentKey"]
+            sys.stderr.write(child["key"] + ": invalid parent key " + parentKey + ". Keeping " + child["key"] + " but not attached to any parent.\n")
 
-        hashStore[parentKey]["membersList"].append(child)
 
 def createGroupMulti(e):
 	""" Création de groupes du type :
