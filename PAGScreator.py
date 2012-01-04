@@ -48,7 +48,7 @@ personnelTypes = personnelDescription.keys()
 
 attributeStringEqualsIgnoreCaseTester="org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester"
 
-membersRegexTester={ "placeholder": None }
+membersTester=[[{ "placeholder": None }]]
 
 structuresDN = "ou=structures,"+baseDN
 
@@ -142,33 +142,6 @@ def createNode(tag, children):
 
 def createNodeWithText(tag, text):
     return createNode(tag, [doc.createTextNode(text)])
-
-def computeMembersRegexTester(membersList):
-    testValues = []
-    attribute_name = None
-    for elt in membersList:
-        if "mainTester" in elt:
-            test = elt["mainTester"]
-        else:
-            testers = elt["testers"]
-            if len(testers) != 1:
-                exit("expected only one test-group")
-            if len(testers[0]) != 1:
-                exit("expected only one test")
-            test = testers[0][0]
-
-        if attribute_name == None:
-            attribute_name = test["attribute-name"]
-        testValues.append(test["test-value"])
-
-        if test["tester-class"] != attributeStringEqualsIgnoreCaseTester:
-            exit("expected tester-class attributeStringEqualsIgnoreCaseTester on all members tester")
-        if attribute_name != test["attribute-name"]:
-            exit("expected same attribute-name on all members tester")
-
-    if attribute_name == None: raise EmptyMembersList
-
-    return regexTester(attribute_name, inListRegex(testValues))
 
 def testerToTestNode(tester, e):
     attrs = [ createNodeWithText("attribute-name", tester["attribute-name"]),
@@ -283,15 +256,11 @@ def computeMembersList(hashStore):
             sys.stderr.write(child["key"] + ": invalid parent key " + parentKey + ". Keeping " + child["key"] + " but not attached to any parent.\n")
 
 def computeMembersTesters(hashStore):
-    def computeMembersTester(e):
-        for andTesters in e["testers"]:
-            for i, tester in enumerate(andTesters):
-                if tester == membersRegexTester:
-                    andTesters[i] = computeMembersRegexTester(e["membersList"])
-
     for e in hashStore.itervalues():
-        computeMembersTester(e)
-
+        if e["testers"] == membersTester:
+            if e["membersList"] == []: 
+                raise EmptyMembersList
+            e["testers"] = sum([ elt["testers"] for elt in e["membersList"] ], [])
 
 
 def createGroupMulti(e):
@@ -412,6 +381,8 @@ def addSubGroupsForEachPersonnel(composanteKey, supannCodeEntite, mainTester):
 def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
 	result_set = ldap_search(ldp, structuresDN, ['supannCodeEntite','description','businessCategory','supannCodeEntiteParent']) 
 	
+        personnels_composantes = []
+
 	for ldapEntry in result_set :	
 		supannCodeEntite, description, businessCategory, supannCodeEntiteParent = ldapEntry
 
@@ -429,16 +400,17 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
 
                 if isPedagogy or businessCategory == "pedagogy":
                     testers = addSubGroupsForEachPersonnel(composanteKey, supannCodeEntite, mainTester)
+                    personnels_composantes.append(supannCodeEntite)
                 else:
                     testers = [[mainTester]]
 
-                addGroupMulti(hashStore, parent, key, description, description, testers, { "mainTester": mainTester })
+                addGroupMulti(hashStore, parent, key, description, description, testers)
 
 		if composanteKey != key:
                         # duplicate the structure which is both pedagogy and something else
                         parent = businessCategoryKey('pedagogy')
                         description_ = description + " (composante)"
-                        addGroupMulti(hashStore, parent, composanteKey, description_, description_, testers, { "mainTester": mainTester })
+                        addGroupMulti(hashStore, parent, composanteKey, description_, description_, testers)
 
                 if isPedagogy:
                     ### Création des conteneurs d'étapes pour les étudiants
@@ -448,11 +420,11 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
                                   [[ mainTester, exactTester('eduPersonAffiliation', 'student') ]])
 
         def createConteneur(key, name, description):
-            addGroup(hashStore, None, businessCategoryKey(key), name, description, membersRegexTester)
+            addGroupMulti(hashStore, None, businessCategoryKey(key), name, description, membersTester)
 
 	# Création du conteneur d'UFR avec ses membres
         addGroupMulti(hashStore, None, businessCategoryKey("pedagogy"), "Composantes personnels", "Toutes les composantes de l'etablissement issues de LDAP", 
-                      [[ membersRegexTester, 
+                      [[ regexTester('supannEntiteAffectation', inListRegex(personnels_composantes)),
                          regexTester('eduPersonAffiliation', inListRegex(personnelTypes)) ]])
 	
 	createConteneur("research", "Laboratoires de recherche", "Tous les laboratoires de l'etablissement issus de LDAP")
@@ -483,12 +455,12 @@ def createGroupsFrom_etape(hashStore, logger, ldp):
 def createGroupsFrom_ou_groups(hashStore, logger, ldp):
             
     # Création du conteneur des groupes LDAP avec ses membres
-    addGroup(hashStore, None, "ldapgroups", u"Groupes LDAP", u"Groupes LDAP dans la branche ou=groups", 
-             membersRegexTester)
+    addGroupMulti(hashStore, None, "ldapgroups", u"Groupes LDAP", u"Groupes LDAP dans la branche ou=groups", 
+                  membersTester)
                             
     # Création du conteneur des matières avec ses membres
-    addGroup(hashStore, None, "autres_matieres", u"Matières transverses", u"Matières sans composante principale", 
-             membersRegexTester, { "skipIfEmpty": True })
+    addGroupMulti(hashStore, None, "autres_matieres", u"Matières transverses", u"Matières sans composante principale", 
+                  membersTester, { "skipIfEmpty": True })
 
     groupsDN="ou=groups,"+baseDN
     result_set = ldap_search(ldp, groupsDN, ['cn','description', 'seeAlso', 'ou'])
