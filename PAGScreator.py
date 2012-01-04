@@ -171,9 +171,6 @@ def computeMembersRegexTester(membersList):
     return regexTester(attribute_name, inListRegex(testValues))
 
 def testerToTestNode(tester, e):
-    if tester == membersRegexTester:
-        tester = computeMembersRegexTester(e["membersList"])
-
     attrs = [ createNodeWithText("attribute-name", tester["attribute-name"]),
               createNodeWithText("tester-class", tester["tester-class"]),
               createNodeWithText("test-value", tester["test-value"]) ]
@@ -284,6 +281,17 @@ def computeMembersList(hashStore):
         else:
             del child["parentKey"]
             sys.stderr.write(child["key"] + ": invalid parent key " + parentKey + ". Keeping " + child["key"] + " but not attached to any parent.\n")
+
+def computeMembersTesters(hashStore):
+    def computeMembersTester(e):
+        for andTesters in e["testers"]:
+            for i, tester in enumerate(andTesters):
+                if tester == membersRegexTester:
+                    andTesters[i] = computeMembersRegexTester(e["membersList"])
+
+    for e in hashStore.itervalues():
+        computeMembersTester(e)
+
 
 
 def createGroupMulti(e):
@@ -571,6 +579,7 @@ try:
 
     handleRenamedGroupKeys(hashStore)
     computeMembersList(hashStore)
+    computeMembersTesters(hashStore)
     for e in hashStore.itervalues():
         try:
             if restrictIdp: restrictOnIdp(restrictIdp)
