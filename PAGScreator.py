@@ -383,6 +383,13 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
 	
         personnels_composantes = []
 
+        children = {}
+	for ldapEntry in result_set :	
+		supannCodeEntite, description, businessCategory, supannCodeEntiteParent = ldapEntry
+                if supannCodeEntiteParent:
+                    children.setdefault(supannCodeEntiteParent, []).append(supannCodeEntite)
+
+        overrideParentKey = {}
 	for ldapEntry in result_set :	
 		supannCodeEntite, description, businessCategory, supannCodeEntiteParent = ldapEntry
 
@@ -401,6 +408,12 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
                 if isPedagogy or businessCategory == "pedagogy":
                     testers = addSubGroupsForEachPersonnel(composanteKey, supannCodeEntite, mainTester)
                     personnels_composantes.append(supannCodeEntite)
+                elif businessCategory == "administration" and len(supannCodeEntite) == 3 and (supannCodeEntite in children):
+                    testers = [[mainTester]]
+                    for c in children[supannCodeEntite]:
+                        if len(c) != 4: continue
+                        testers.append([ exactTester('supannEntiteAffectation', c) ])
+                        overrideParentKey[structureKey(businessCategory, c)] = structureKey(businessCategory, supannCodeEntite)
                 else:
                     testers = [[mainTester]]
 
@@ -418,6 +431,10 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
                                   description + u" (étudiants)",
                                   u"Toutes les étapes de la composante "+description+" issus de LDAP",
                                   [[ mainTester, exactTester('eduPersonAffiliation', 'student') ]])
+
+
+        for key, parentKey in overrideParentKey.iteritems():
+            hashStore[key]["parentKey"] = parentKey
 
         def createConteneur(key, name, description):
             addGroupMulti(hashStore, None, businessCategoryKey(key), name, description, membersTester)
