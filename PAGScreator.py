@@ -55,6 +55,7 @@ structuresDN = "ou=structures,"+baseDN
 typo3attrs = {
     'eduPersonAffiliation': 'HTTP_SHIB_EP_UNSCOPEDAFFILIATION',
     'eduPersonOrgUnitDN': 'HTTP_SHIB_EP_ORGUNITDN',
+    'memberOf': 'HTTP_SHIB_MEMBEROF',
     'supannEtuEtape': 'HTTP_SHIB_SUPANN_SUPANNETUETAPE',
     'supannEntiteAffectation': 'HTTP_SHIB_SUPANN_SUPANNENTITEAFFECTATION',
     'Shib-Identity-Provider': 'Shib-Identity-Provider',
@@ -474,10 +475,11 @@ def createGroupsFrom_ou_groups(hashStore, logger, ldp):
     # Création du conteneur des groupes LDAP avec ses membres
     addGroupMulti(hashStore, None, "ldapgroups", u"Groupes LDAP", u"Groupes LDAP dans la branche ou=groups", 
                   membersTester)
-                            
-    # Création du conteneur des matières avec ses membres
-    addGroupMulti(hashStore, None, "autres_matieres", u"Matières transverses", u"Matières sans composante principale", 
-                  membersTester, { "skipIfEmpty": True })
+
+    if esup_portail:
+        # Création du conteneur des matières avec ses membres
+        addGroupMulti(hashStore, None, "autres_matieres", u"Matières transverses", u"Matières sans composante principale", 
+                      membersTester, { "skipIfEmpty": True })
 
     groupsDN="ou=groups,"+baseDN
     result_set = ldap_search(ldp, groupsDN, ['cn','description', 'seeAlso', 'ou'])
@@ -528,12 +530,13 @@ def createGroupsFrom_ou_groups(hashStore, logger, ldp):
             name = cn              
             parent = 'ldapgroups'
 
-        if esup_portail3:
+        if esup_portail3 or typo3:
             tester = exactTester('memberOf', 'cn=' + cn + "," + groupsDN)
         else:
             tester = exactTester('groups', cn)
 
-        addGroup(hashStore, parent, cn, name, description, tester)
+        if parent == 'ldapgroups':
+            addGroup(hashStore, parent, cn, name, description, tester)
 
 logger = logging.getLogger()
 
@@ -562,7 +565,7 @@ try:
     hashStore = {}
     createCommonRoots(hashStore)
     createGroupsFrom_etape(hashStore, logger, ldp)		
-    if esup_portail: createGroupsFrom_ou_groups(hashStore, logger, ldp)
+    createGroupsFrom_ou_groups(hashStore, logger, ldp)
     neededParents = computeNeededParents(hashStore) # must be done after getting etapes and groups
     createGroupsFrom_structures(hashStore, logger, ldp, neededParents)
 
