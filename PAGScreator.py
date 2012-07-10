@@ -260,7 +260,9 @@ def computeMembersTesters(hashStore):
     for e in hashStore.itervalues():
         if e["testers"] == membersTester:
             if e["membersList"] == []: 
-                raise EmptyMembersList
+                logger.warn("expected non-empty membersList for " + e["raw_key"])
+                if not e["skipIfEmpty"]:
+                    exit("expected non-empty membersList for " + e["raw_key"])
             e["testers"] = sum([ elt["testers"] for elt in e["membersList"] ], [])
 
 
@@ -573,13 +575,8 @@ try:
     computeMembersList(hashStore)
     computeMembersTesters(hashStore)
     for e in hashStore.itervalues():
-        try:
-            if restrictIdp: restrictOnIdp(restrictIdp)
-            groupStore.appendChild(createGroupMulti(e))
-        except EmptyMembersList:
-            logger.warn("expected non-empty membersList for " + e["raw_key"])
-            if not e["skipIfEmpty"]:
-                exit("expected non-empty membersList for " + e["raw_key"])
+        if restrictIdp: restrictOnIdp(restrictIdp)
+        groupStore.appendChild(createGroupMulti(e))
  
     write_to_file(doc, outXmlFile)
     checkAndIndent(outXmlFile)
