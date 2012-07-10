@@ -529,7 +529,8 @@ def createGroupsFrom_ou_groups(hashStore, logger, ldp):
                 continue
             parent = "diploma_" + regexFirstMatch("^ou=([^,]*)", seeAlso[0])
         else:   
-            name = cn              
+            name = cn
+            description = description + " (" + cn + ")"
             parent = 'ldapgroups'
 
         if esup_portail3 or typo3:
