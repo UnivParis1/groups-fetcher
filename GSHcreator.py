@@ -51,6 +51,7 @@ structures_path = "structures";
 cron = "30 6 * * * ?"; // 1h after 5h30 (m-a-j harpege->LDAP)
 
 grouperSession = GrouperSession.startRootSession();
+addRootStem(structures_path, structures_path);
 knownGroups = new HashSet();
 """
 
