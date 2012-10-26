@@ -540,7 +540,7 @@ def createGroupsFrom_ou_groups(hashStore, logger, ldp):
         else:
             tester = exactTester('groups', cn)
 
-        if parent == 'ldapgroups':
+        if not typo3 or parent == 'ldapgroups':
             addGroup(hashStore, parent, cn, name, description, tester)
 
 logger = logging.getLogger()
