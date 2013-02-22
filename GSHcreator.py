@@ -121,7 +121,7 @@ getGroup(fullname) { return GroupFinder.findByName(grouperSession, fullname, fal
     a.assignValue(LoaderLdapUtils.grouperLoaderLdapTypeName(), "LDAP_SIMPLE");
     a.assignValue(LoaderLdapUtils.grouperLoaderLdapServerIdName(), "personLdap");
     a.assignValue(LoaderLdapUtils.grouperLoaderLdapSourceIdName(), "ldap");
-    a.assignValue(LoaderLdapUtils.grouperLoaderLdapSubjectAttributeName(), "uid");
+    a.assignValue(LoaderLdapUtils.grouperLoaderLdapSubjectAttributeName(), "eduPersonPrincipalName");
     a.assignValue(LoaderLdapUtils.grouperLoaderLdapSubjectIdTypeName(), "subjectId");
 
     a.assignValue(LoaderLdapUtils.grouperLoaderLdapQuartzCronName(), attrs{"cron"});
