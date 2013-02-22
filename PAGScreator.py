@@ -412,7 +412,7 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
                 if isPedagogy or businessCategory == "pedagogy":
                     testers = addSubGroupsForEachPersonnel(composanteKey, supannCodeEntite, mainTester)
                     personnels_composantes.append(supannCodeEntite)
-                elif businessCategory == "administration" and len(supannCodeEntite) == 3 and (supannCodeEntite in children):
+                elif businessCategory in ["administration", "library"] and len(supannCodeEntite) in [2, 3] and (supannCodeEntite in children):
                     testers = [[mainTester]]
                     for c in children[supannCodeEntite]:
                         if len(c) != 4: continue
