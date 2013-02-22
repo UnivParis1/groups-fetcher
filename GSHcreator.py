@@ -103,7 +103,7 @@ if (ldap{"parentKey"} != null) attrs{"seeAlso"} = "cn=" + ldap{"parentKey"} + ",
 
 getAttributeAssignByName(group, name) { return group.getAttributeDelegate().assignAttributeByName(name).getAttributeAssign(); }
 mayAssignAttrValue(group, wantedAttrs, attrName) { if (wantedAttrs{attrName} != null) getAttributeAssignByName(group, "etc:attribute:" + attrName).getValueDelegate().assignValue(wantedAttrs{attrName}); }
-getGroup(fullname) { it = getGroups(fullname).iterator(); while (it.hasNext()) { g = it.next(); if (g.getName().equals(fullname)) return g; }; return null; }
+getGroup(fullname) { return GroupFinder.findByName(grouperSession, fullname, false); }
 
 // createGroupOnPeopleAttrs(attrs) {
     fullname = attrs{"parentStem"} + ":" + attrs{"id"};
