@@ -391,7 +391,7 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
 	for ldapEntry in result_set :	
 		supannCodeEntite, description, businessCategory, supannCodeEntiteParent = ldapEntry
                 if supannCodeEntiteParent:
-                    children.setdefault(supannCodeEntiteParent, []).append(supannCodeEntite)
+                    children.setdefault(supannCodeEntiteParent, []).append({ 'code': supannCodeEntite, 'businessCategory': businessCategory })
 
         overrideParentKey = {}
 	for ldapEntry in result_set :	
@@ -415,9 +415,9 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
                 elif businessCategory in ["administration", "library"] and len(supannCodeEntite) in [2, 3] and (supannCodeEntite in children):
                     testers = [[mainTester]]
                     for c in children[supannCodeEntite]:
-                        if len(c) != 4: continue
-                        testers.append([ exactTester('supannEntiteAffectation', c) ])
-                        overrideParentKey[structureKey(businessCategory, c)] = structureKey(businessCategory, supannCodeEntite)
+                        if len(c['code']) != 4: continue
+                        testers.append([ exactTester('supannEntiteAffectation', c['code']) ])
+                        overrideParentKey[structureKey(c['businessCategory'], c['code'])] = structureKey(businessCategory, supannCodeEntite)
                 else:
                     testers = [[mainTester]]
 
