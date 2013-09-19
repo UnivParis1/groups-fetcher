@@ -224,11 +224,11 @@ def get_ldap_value(ldapEntry, attr):
 def get_ldap_values(ldapEntry, attrs):
     return [get_ldap_value(ldapEntry, attr) for attr in attrs] 
 
-def addSubGroupsForEachPersonnel(composanteKey, supannCodeEntite, mainTester):
+def addSubGroupsForEachPersonnel(composanteKey, description, mainTester):
     testers = []
     for typ, descr in personnelDescription.iteritems():
         tester = [ mainTester, exactTester('eduPersonAffiliation', typ) ] 
-        description_ = "Tous les " + descr + " de "+supannCodeEntite
+        description_ = description + " (" + descr + ")"
         addGroupMulti(hashStore, composanteKey, composanteKey+"_"+typ, description_, description_, [tester])
         testers.append(tester)
     return testers

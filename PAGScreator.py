@@ -372,11 +372,11 @@ def structureParent(businessCategory, supannCodeEntiteParent):
         print "skipping unknown businessCategory " + businessCategory
         return None
 
-def addSubGroupsForEachPersonnel(composanteKey, supannCodeEntite, mainTester):
+def addSubGroupsForEachPersonnel(composanteKey, description, mainTester):
     testers = []
     for typ, descr in personnelDescription.iteritems():
         tester = [ mainTester, exactTester('eduPersonAffiliation', typ) ] 
-        description_ = "Tous les " + descr + " de "+supannCodeEntite
+        description_ = description + " (" + descr + ")"
         addGroupMulti(hashStore, composanteKey, composanteKey+"_"+typ, description_, description_, [tester])
         testers.append(tester)
     return testers
@@ -410,7 +410,7 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
                     composanteKey = key
 
                 if isPedagogy or businessCategory == "pedagogy":
-                    testers = addSubGroupsForEachPersonnel(composanteKey, supannCodeEntite, mainTester)
+                    testers = addSubGroupsForEachPersonnel(composanteKey, description, mainTester)
                     personnels_composantes.append(supannCodeEntite)
                 elif businessCategory in ["administration", "library"] and len(supannCodeEntite) in [2, 3] and (supannCodeEntite in children):
                     testers = [[mainTester]]
