@@ -279,8 +279,6 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
                 eduPersonAffiliationFilter = exactTester('eduPersonAffiliation', '*')
 
                 if isPedagogy or ldap["businessCategory"] == "pedagogy":
-                    ldap["supannCodeEntite"] += "-personnel"
-                    ldap["ou"] += " (personnel)"
                     ldap["description"] += " (personnel)"
                     eduPersonAffiliationFilter = personnelFilter()
                 elif ldap["businessCategory"] in ["administration", "library"] and len(supannCodeEntite) == 4 and len(ldap["supannCodeEntiteParent"]) in [2, 3]:
