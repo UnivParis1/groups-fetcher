@@ -43,15 +43,18 @@ timeout=0
 
 
 def gsh_header():
-    return """
+    return u"""
 ldapGroupsDn = "ou=groups,dc=univ-paris1,dc=fr";
 searchDn = "ou=people";
-structures_path = "structures";
 
 cron = "30 6 * * * ?"; // 1h after 5h30 (m-a-j harpege->LDAP)
 
 grouperSession = GrouperSession.startRootSession();
-addRootStem(structures_path, structures_path);
+addRootStem("employees", "Personnels");
+addStem("employees", "pedagogy", "Composantes");
+addStem("employees", "administration", "Services");
+addStem("employees", "library", "Bibliothèques");
+addStem("employees", "research", "Laboratoires de recherche");
 knownGroups = new HashSet();
 """
 
@@ -63,8 +66,8 @@ removeGroup(g) { System.out.println("removing " + g.getName()); g.delete(); }
 getStemChilds(stemName) { return StemFinder.findByName(grouperSession, stemName).getChildGroups(); }
 
 // remove dead groups
-mayDeleteGroup(g) { if (!knownGroups.contains(g.getName())) removeGroup(g); }
-for (g: getStemChilds(structures_path)) mayDeleteGroup(g);
+//mayDeleteGroup(g) { if (!knownGroups.contains(g.getName())) removeGroup(g); }
+//for (g: getStemChilds(employees_path)) mayDeleteGroup(g);
 """
 
 def gsh_one_params(e):
@@ -91,10 +94,9 @@ ldap = new Hashtable();
 def gsh_sync_one():
     return """
 
-attrs = new Hashtable(ldap); // get all, including: description businessCategory filter labeledURI
+attrs = new Hashtable(ldap); // get all, including: description businessCategory filter labeledURI parentStem
 attrs{"cron"} = cron;
 attrs{"searchDn"} = searchDn;
-attrs{"parentStem"} = structures_path;
 
 attrs{"id"} = ldap{"supannCodeEntite"};
 attrs{"name"} = ldap{"ou"};
@@ -256,11 +258,13 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
                 if not ldap["ou"]:
                     ldap["ou"] = supannCodeEntite
 
-                isPedagogy = "structures:" + supannCodeEntite in neededParents
+                isPedagogy = ("employees:pedagogy:" + supannCodeEntite) in neededParents
                 isPedagogy = ldap["businessCategory"] == "pedagogy"
 
                 if ldap["businessCategory"] == "council":
                     continue # skip
+
+                ldap["parentStem"] = "employees:" + ldap["businessCategory"];
 
                 if ldap["businessCategory"] in ["administration", "library"] and len(supannCodeEntite) in [2, 3] and (supannCodeEntite in children):
                     orFilter = [ exactTester('supannEntiteAffectation', supannCodeEntite) ]
@@ -280,13 +284,13 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
                     ldap["description"] += " (personnel)"
                     eduPersonAffiliationFilter = personnelFilter()
                 elif ldap["businessCategory"] in ["administration", "library"] and len(supannCodeEntite) == 4 and len(ldap["supannCodeEntiteParent"]) in [2, 3]:
-                    ldap["parentKey"] = "structures:" + ldap["supannCodeEntiteParent"]
+                    ldap["parentKey"] = ldap["parentStem"] + ":" + ldap["supannCodeEntiteParent"]
 
                 ldap["filter"] = andFilterToFilter([ supannEntiteAffectationFilter, eduPersonAffiliationFilter ])
 
                 del ldap["supannCodeEntiteParent"] # cleanup
 
-                key = "structures:" + ldap["supannCodeEntite"]
+                key = ldap["parentStem"] + ":" + ldap["supannCodeEntite"]
                 hashStore[key] = ldap
 
 # Création des groupes étapes, par UFR
@@ -302,7 +306,7 @@ def createGroupsFrom_etape(hashStore, logger, ldp):
                 ldap["name"] = u"Etape - " + description
 
                 ldap["filter"]  = exactTester('eduPersonOrgUnitDN', "ou=" + ou + "," + etapesDN);
-                ldap["parentKey"] = "structures:" + ufr
+                ldap["parentKey"] = "employees:pedagogy:" + ufr
 
 		# Selon le type d'ou on détermine le type de groupe
 		# Création des groupes étapes
