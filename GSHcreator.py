@@ -262,7 +262,7 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
                 if ldap["businessCategory"] == "council":
                     continue # skip
 
-                if ldap["businessCategory"] == "administration" and len(supannCodeEntite) == 3 and (supannCodeEntite in children):
+                if ldap["businessCategory"] in ["administration", "library"] and len(supannCodeEntite) in [2, 3] and (supannCodeEntite in children):
                     orFilter = [ exactTester('supannEntiteAffectation', supannCodeEntite) ]
                     for c in children[supannCodeEntite]:
                         if len(c) != 4: continue
@@ -279,7 +279,7 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
                     ldap["ou"] += " (personnel)"
                     ldap["description"] += " (personnel)"
                     eduPersonAffiliationFilter = personnelFilter()
-                elif ldap["businessCategory"] == "administration" and len(supannCodeEntite) == 4 and len(ldap["supannCodeEntiteParent"]) == 3:
+                elif ldap["businessCategory"] in ["administration", "library"] and len(supannCodeEntite) == 4 and len(ldap["supannCodeEntiteParent"]) in [2, 3]:
                     ldap["parentKey"] = "structures:" + ldap["supannCodeEntiteParent"]
 
                 ldap["filter"] = andFilterToFilter([ supannEntiteAffectationFilter, eduPersonAffiliationFilter ])
