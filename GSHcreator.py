@@ -47,7 +47,7 @@ def gsh_header():
 ldapGroupsDn = "ou=groups,dc=univ-paris1,dc=fr";
 searchDn = "ou=people";
 
-cron = "30 6 * * * ?"; // 1h after 5h30 (m-a-j harpege->LDAP)
+cron = "0 30 6 * * ?"; // 1h after 5h30 (m-a-j harpege->LDAP)
 
 grouperSession = GrouperSession.startRootSession();
 addRootStem("employees", "Personnels");
