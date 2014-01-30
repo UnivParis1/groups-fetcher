@@ -361,7 +361,7 @@ def createCommonRoots(hashStore):
 def structureParent(businessCategory, supannCodeEntiteParent):
     # Selon le type d'ou on détermine le type de groupe
     # Création des groupes pour les services
-    if businessCategory == "pedagogy" or businessCategory == "research" or businessCategory == "library":
+    if businessCategory == "pedagogy" or businessCategory == "research" or businessCategory == "library" or businessCategory == "doctoralSchool":
         return businessCategoryKey(businessCategory)
     elif businessCategory == "administration" :
         return businessCategoryKey(businessCategory)
@@ -451,6 +451,8 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
 	createConteneur("research", "Laboratoires de recherche", "Tous les laboratoires de l'etablissement issus de LDAP")
 
 	createConteneur("library", u"Bibliothèques", u"Toutes les bibliothèques de l'etablissement issus de LDAP")
+
+	createConteneur("doctoralSchool", u"Écoles doctorales", u"Toutes les écoles doctorales de l'etablissement issus de LDAP")
 	
 	# Création du conteneur de services avec ses membres
 	createConteneur("administration", "Services", "Tous les services de l'etablissement issu de LDAP")
