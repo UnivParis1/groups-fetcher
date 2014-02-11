@@ -31,6 +31,7 @@ ldapPassword  = Config.get('ldap', 'password')
 baseDN        = Config.get('ldap', 'baseDN')
 etapesDN      = Config.get('ldap', 'etapesDN')
 structuresDN = "ou=structures,"+baseDN
+sitesFile     = safeConfigGet('common', 'sitesFile')
 
 personnelDescription = {
     'staff': 'personnels administratifs et techniques', 
@@ -98,8 +99,8 @@ attrs = new Hashtable(ldap); // get all, including: description businessCategory
 attrs{"cron"} = cron;
 attrs{"searchDn"} = searchDn;
 
-attrs{"id"} = ldap{"supannCodeEntite"};
-attrs{"name"} = ldap{"ou"};
+if (ldap{"supannCodeEntite"} != null) attrs{"id"} = ldap{"supannCodeEntite"};
+if (ldap{"ou"} != null) attrs{"name"} = ldap{"ou"};
 if (ldap{"parentKey"} != null) attrs{"seeAlso"} = "cn=" + ldap{"parentKey"} + "," + ldapGroupsDn;
 
 
@@ -311,6 +312,26 @@ def createGroupsFrom_etape(hashStore, logger, ldp):
                 hashStore["diploma:" + ou] = ldap
 	
 
+def readPythonConf(file):
+    h = {}
+    with open(file) as fo:
+        exec(fo.read(), globals(), h)
+    return h
+
+def createGroups_sites(hashStore, logger, sitesFile):
+    cfg = readPythonConf(sitesFile)
+    for id, buildingNames in cfg["sites"].iteritems():
+        buildingNamesFilter = orFilterToFilter([ exactTester('buildingName', v) for v in buildingNames ])
+        ldap = { 
+            "parentStem": cfg["parentStem"],
+            "id": id,
+            "name": "Personnel site " + id.upper(),
+            "description": "Personnel du site " + ", ".join(buildingNames),
+            "filter": "(&(eduPersonAffiliation=member)(accountStatus=active)" + buildingNamesFilter + ")",
+            } 
+        key = ldap["parentStem"] + ":" + id
+        hashStore[key] = ldap
+
 logger = logging.getLogger()
 
 ## first you must open a connection to the server
@@ -337,6 +358,7 @@ try:
     neededParents = computeNeededParents(hashStore) # must be done after getting etapes and groups
     hashStore = {}
     createGroupsFrom_structures(hashStore, logger, ldp, neededParents)
+    if sitesFile: createGroups_sites(hashStore, logger, sitesFile)
 
     write_to_file(hashStore, outFile)
 		
