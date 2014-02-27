@@ -112,6 +112,7 @@ getGroup(fullname) { return GroupFinder.findByName(grouperSession, fullname, fal
     fullname = attrs{"parentStem"} + ":" + attrs{"id"};
     group = getGroup(fullname);
     if (group == null) group = addGroup(attrs{"parentStem"}, attrs{"id"}, attrs{"name"});
+    group.setDisplayExtension(attrs{"name"});
     group.setDescription(attrs{"description"});
     group.store();
 
