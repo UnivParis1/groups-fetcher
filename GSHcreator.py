@@ -260,7 +260,6 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
                     ldap["ou"] = supannCodeEntite
 
                 isPedagogy = ("employees:pedagogy:" + supannCodeEntite) in neededParents
-                isPedagogy = ldap["businessCategory"] == "pedagogy"
 
                 if ldap["businessCategory"] == "council":
                     continue # skip
