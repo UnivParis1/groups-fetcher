@@ -35,7 +35,7 @@ sitesFile     = safeConfigGet('common', 'sitesFile')
 
 personnelDescription = {
     'staff': 'personnels administratifs et techniques', 
-    'researcher': 'chercheurs', 
+    'faculty': 'chercheurs', 
     'teacher' : 'enseignants',
     }
 personnelTypes = personnelDescription.keys()
