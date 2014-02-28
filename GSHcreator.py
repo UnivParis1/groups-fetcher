@@ -276,12 +276,10 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
                 else:
                     supannEntiteAffectationFilter = exactTester('supannEntiteAffectation', supannCodeEntite)
 
-                # ensure weird accounts do not show up since we configure grouper sources.xml to show only people with eduPersonAffiliation=*
-                eduPersonAffiliationFilter = exactTester('eduPersonAffiliation', '*')
+                eduPersonAffiliationFilter = personnelFilter()
 
                 if isPedagogy or ldap["businessCategory"] == "pedagogy":
                     ldap["description"] += " (personnel)"
-                    eduPersonAffiliationFilter = personnelFilter()
                 elif ldap["businessCategory"] in ["administration", "library"] and len(supannCodeEntite) == 4 and len(ldap["supannCodeEntiteParent"]) in [2, 3]:
                     ldap["parentKey"] = ldap["parentStem"] + ":" + ldap["supannCodeEntiteParent"]
 
