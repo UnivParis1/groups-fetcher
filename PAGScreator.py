@@ -167,6 +167,9 @@ def regexTester(attribute_name, test_value):
 def exactTester(attribute_name, test_value):
     return tester(attribute_name, test_value, "org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester")
 
+def personnelFilter() :
+    return regexTester('eduPersonAffiliation', inListRegex(personnelTypes))
+
 uuids = {}
 def checkUniqueRaw(e, typ):
     global uuids
@@ -446,7 +449,7 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
 	# Création du conteneur d'UFR avec ses membres
         addGroupMulti(hashStore, None, businessCategoryKey("pedagogy"), "Composantes personnels", "Toutes les composantes de l'etablissement issues de LDAP", 
                       [[ regexTester('supannEntiteAffectation', inListRegex(personnels_composantes)),
-                         regexTester('eduPersonAffiliation', inListRegex(personnelTypes)) ]])
+                         personnelFilter() ]])
 	
 	createConteneur("research", "Laboratoires de recherche", "Tous les laboratoires de l'etablissement issus de LDAP")
 
