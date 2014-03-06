@@ -375,14 +375,11 @@ def structureParent(businessCategory, supannCodeEntiteParent):
         print "skipping unknown businessCategory " + businessCategory
         return None
 
-def addSubGroupsForEachPersonnel(composanteKey, description, mainTester):
-    testers = []
+def addSubGroupsForEachPersonnel(hashStore, composanteKey, description, mainTester):
     for typ, descr in personnelDescription.iteritems():
         tester = [ mainTester, exactTester('eduPersonAffiliation', typ) ] 
         description_ = description + " (" + descr + ")"
         addGroupMulti(hashStore, composanteKey, composanteKey+"_"+typ, description_, description_, [tester])
-        testers.append(tester)
-    return testers
 
 
 def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
@@ -412,17 +409,16 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
                 else:
                     composanteKey = key
 
+                testers = [[ mainTester, personnelFilter() ]]
+
                 if isPedagogy or businessCategory == "pedagogy":
-                    testers = addSubGroupsForEachPersonnel(composanteKey, description, mainTester)
+                    addSubGroupsForEachPersonnel(hashStore, composanteKey, description, mainTester)
                     personnels_composantes.append(supannCodeEntite)
                 elif businessCategory in ["administration", "library"] and len(supannCodeEntite) in [2, 3] and (supannCodeEntite in children):
-                    testers = [[mainTester]]
                     for c in children[supannCodeEntite]:
                         if len(c['code']) != 4: continue
-                        testers.append([ exactTester('supannEntiteAffectation', c['code']) ])
+                        testers.append([ exactTester('supannEntiteAffectation', c['code']), personnelFilter() ])
                         overrideParentKey[structureKey(c['businessCategory'], c['code'])] = structureKey(businessCategory, supannCodeEntite)
-                else:
-                    testers = [[mainTester]]
 
                 addGroupMulti(hashStore, parent, key, description, description, testers)
 
