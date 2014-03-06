@@ -38,7 +38,7 @@ personnelDescription = {
     'faculty': 'chercheurs', 
     'teacher' : 'enseignants',
     }
-personnelTypes = personnelDescription.keys()
+personnelTypes = ['staff', 'faculty', 'teacher']
 
 timeout=0
 

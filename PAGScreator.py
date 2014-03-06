@@ -44,7 +44,7 @@ personnelDescription = {
     'researcher': 'chercheurs', 
     'teacher' : 'enseignants',
     }
-personnelTypes = personnelDescription.keys()
+personnelTypes = ['staff', 'faculty', 'teacher']
 
 attributeStringEqualsIgnoreCaseTester="org.jasig.portal.groups.pags.testers.StringEqualsIgnoreCaseTester"
 
