@@ -499,6 +499,7 @@ def createGroupsFrom_ou_groups(hashStore, logger, ldp):
                                     
         #si ce sont de matière le nom du groupe esup correspond à la description dans LDAP
         if re.match("^mati([0-9])*",cn) :
+            description = description + " (" + cn + ")"
             name = u"Matière - " + description
 
             composantesParent = regexFilterAndGetGroup("ou=([^,]*),ou=structures,.*", 1, seeAlso)
