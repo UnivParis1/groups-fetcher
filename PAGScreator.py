@@ -531,7 +531,7 @@ def createGroupsFrom_ou_groups(hashStore, logger, ldp):
                 logger.warn("skipping " + cn + ": with multiple etape parents " + repr(seeAlso))
                 continue
             parent = "diploma_" + regexFirstMatch("^ou=([^,]*)", seeAlso[0])
-        elif re.match("^structures:",cn) :
+        elif re.match("^(structures:|employees\.)",cn) :
             continue # ignore "structures" groups created by grouper
         else:   
             name = cn
