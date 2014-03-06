@@ -189,7 +189,7 @@ def addGroup(hashStore, parentKey, key, name, description, tester, moreOptions =
 def addGroupMulti(hashStore, parentKey, raw_key, name, description, testers, moreOptions = {}):
     # elimination des points "." dans les nomenclatures des key pour éviter une exception esup               
     # elimination des points ":" dans les nomenclatures des key pour contourner des bugs dans le selecteur de groupes pour un canal
-    key = raw_key.replace(".","_").replace(":", "_")
+    key = raw_key.replace(".","_").replace(":", "__")
     e = {
         "raw_key": raw_key,
         "key": key,
