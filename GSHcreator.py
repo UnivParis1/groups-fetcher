@@ -51,11 +51,11 @@ searchDn = "ou=people";
 cron = "0 30 6 * * ?"; // 1h after 5h30 (m-a-j harpege->LDAP)
 
 grouperSession = GrouperSession.startRootSession();
-addRootStem("employees", "Personnels");
-addStem("employees", "pedagogy", "Composantes");
-addStem("employees", "administration", "Services");
-addStem("employees", "library", "Bibliothèques");
-addStem("employees", "research", "Laboratoires de recherche");
+//addRootStem("employees", "Personnels");
+//addStem("employees", "pedagogy", "Composantes");
+//addStem("employees", "administration", "Services");
+//addStem("employees", "library", "Bibliothèques");
+//addStem("employees", "research", "Laboratoires de recherche");
 knownGroups = new HashSet();
 """
 
