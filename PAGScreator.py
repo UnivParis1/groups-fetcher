@@ -480,71 +480,32 @@ def createGroupsFrom_ou_groups(hashStore, logger, ldp):
     addGroupMulti(hashStore, None, "ldapgroups", u"Groupes LDAP", u"Groupes LDAP dans la branche ou=groups", 
                   membersTester)
 
-    if esup_portail:
-        # Création du conteneur des matières avec ses membres
-        addGroupMulti(hashStore, None, "autres_matieres", u"Matières transverses", u"Matières sans composante principale", 
-                      membersTester, { "skipIfEmpty": True })
-
     groupsDN="ou=groups,"+baseDN
     result_set = ldap_search(ldp, groupsDN, ['cn','description', 'seeAlso', 'ou'])
-
-    validGroups = {}
-    for ldapEntry in result_set :                    
-        cn, description, seeAlso, ou = ldapEntry
-        validGroups[cn] = 1
             
     for ldapEntry in result_set :                    
         cn, description, seeAlso, ou = ldapEntry
         if description == None: description = cn
                                     
-        #si ce sont de matière le nom du groupe esup correspond à la description dans LDAP
         if re.match("^mati([0-9])*",cn) :
-            description = description + " (" + cn + ")"
-            name = u"Matière - " + description
-
-            composantesParent = regexFilterAndGetGroup("ou=([^,]*),ou=structures,.*", 1, seeAlso)
-            etapesParent = regexFilterAndGetGroup("ou=([^,]*),ou=[^,]*,ou=diploma,.*", 1, seeAlso)
-            if len(etapesParent) == 1:
-                parent = "diploma_" + etapesParent[0]
-            elif len(composantesParent) == 1:
-                parent = etudiantsComposanteKey(composantesParent[0])
-            elif len(composantesParent) > 1:
-                exit(cn + ": can not handle case of multiple composantesParent " + repr(composantesParent))
-            else:
-                parent = "autres_matieres"
+            continue
         elif re.match("^gpelp\..*",cn) :
-            codeApogee = regexFirstMatch("^gpelp\.(.*)",cn)
-            name = ou + " (" + codeApogee + ")"
-            description = description + " (" + codeApogee + ")"
-            if len(seeAlso) > 1:
-                #print ("skipping group %s (ou=%s): with %d parents %s" % (cn, ou, len(seeAlso), repr(seeAlso)))
-                continue
-            parent = regexFirstMatch("^cn=([^,]*)", seeAlso[0])
-            if not parent in validGroups:
-                #print "skipping group " + cn + " with unknown parent " + parent
-                continue
+            continue
         elif re.match("^gpetp.*",cn) :
-            codeApogee = regexFirstMatch("^gpetp\.(.*)",cn)
-            name = u"Groupe - " + ou + " (gpetp-" + codeApogee + ")"
-            description = description + " (" + codeApogee + ")"
-            if len(seeAlso) > 1:
-                logger.warn("skipping " + cn + ": with multiple etape parents " + repr(seeAlso))
-                continue
-            parent = "diploma_" + regexFirstMatch("^ou=([^,]*)", seeAlso[0])
+            continue
         elif re.match("^(structures:|employees\.)",cn) :
             continue # ignore "structures" groups created by grouper
         else:   
             name = cn
             description = description + " (" + cn + ")"
-            parent = 'ldapgroups'
 
         if esup_portail3 or typo3:
             tester = exactTester('memberOf', 'cn=' + cn + "," + groupsDN)
         else:
             tester = exactTester('groups', cn)
 
-        if not typo3 or parent == 'ldapgroups':
-            addGroup(hashStore, parent, cn, name, description, tester)
+        parent = 'ldapgroups'
+        addGroup(hashStore, parent, cn, name, description, tester)
 
 logger = logging.getLogger()
 
