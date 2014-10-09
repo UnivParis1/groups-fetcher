@@ -85,6 +85,10 @@ ldap = new Hashtable();
             # - DirContext.search seems to call SearchFilter.format which says: 
             #   To escape '{' or '}' (or any other character), use '\'.
             v = v.replace('{', '\\\\{').replace('}', '\\\\}')
+        elif k == "parentKey":
+            # grouper stem separator ":" is replaced with "." in psp export
+            # since parentKey is used to compute seeAlso, the same replacement must be done here:
+            v = v.replace(":", ".")
         if v == None: 
             continue;
         else:
