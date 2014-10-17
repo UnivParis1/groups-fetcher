@@ -368,7 +368,7 @@ def structureParent(businessCategory, supannCodeEntiteParent):
         return businessCategoryKey(businessCategory)
     elif businessCategory == "administration" :
         return businessCategoryKey(businessCategory)
-    elif businessCategory == "council":
+    elif businessCategory == "council" or businessCategory == "organization":
         # skip silently
         return None
     else:
