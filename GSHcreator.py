@@ -249,11 +249,15 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
         personnels_composantes = []
 
         children = {}
+        businessCategories = {}
 	for ldapEntry in result_set :	
 		supannCodeEntite = ldapEntry[0]
                 supannCodeEntiteParent = ldapEntry[1]
+                businessCategory = ldapEntry[3]
                 if supannCodeEntiteParent:
                     children.setdefault(supannCodeEntiteParent, []).append(supannCodeEntite)
+                if businessCategory:
+                    businessCategories[supannCodeEntite] = businessCategory
 
         overrideParentKey = {}
 	for ldapEntry in result_set :
@@ -286,7 +290,7 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
                 if isPedagogy or ldap["businessCategory"] == "pedagogy":
                     ldap["description"] += " (personnel)"
                 elif ldap["businessCategory"] in ["administration", "library"] and len(supannCodeEntite) == 4 and len(ldap["supannCodeEntiteParent"]) in [2, 3]:
-                    ldap["parentKey"] = ldap["parentStem"] + ":" + ldap["supannCodeEntiteParent"]
+                    ldap["parentKey"] = "employees:" + businessCategories[ldap["supannCodeEntiteParent"]] + ":" + ldap["supannCodeEntiteParent"]
 
                 ldap["filter"] = andFilterToFilter([ supannEntiteAffectationFilter, eduPersonAffiliationFilter ])
 
