@@ -8,7 +8,7 @@ GROUPER_LOG=/var/log/grouper
 curDir=$(dirname $0)
 
 out_file=$curDir/temp.gsh
-conf_file=$curDir/GSHcreator.ini
+conf_file=$curDir/config.ini
 log_file=$GROUPER_LOG/GSHcreator.log.
 
 echo -e "Creating GSH temporary file...\n"

@@ -137,6 +137,8 @@ getGroup(fullname) { return GroupFinder.findByName(grouperSession, fullname, fal
     a.assignValue(LoaderLdapUtils.grouperLoaderLdapFilterName(), attrs{"filter"});
     a.assignValue(LoaderLdapUtils.grouperLoaderLdapSearchDnName(), attrs{"searchDn"});
 
+    grantPriv(fullname, "GrouperAll", AccessPrivilege.READ);
+
     loaderRunOneJob(group);
     knownGroups.add(fullname);
 // }
@@ -245,7 +247,7 @@ def addSubGroupsForEachPersonnel(composanteKey, description, mainTester):
 
 def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
 	result_set = ldap_search(ldp, structuresDN, ['supannCodeEntite','supannCodeEntiteParent','description','businessCategory','labeledURI','ou']) 
-	
+
         personnels_composantes = []
 
         children = {}
@@ -271,10 +273,8 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
 
                 isPedagogy = ("employees:pedagogy:" + supannCodeEntite) in neededParents
 
-                if ldap["businessCategory"] == "council" or ldap["businessCategory"] == "doctoralSchool" or ldap["businessCategory"] == "organization":
+                if ldap["businessCategory"] == "council" or ldap["businessCategory"] == "doctoralSchool" or ldap["businessCategory"] == "organization" or not hasattr(ldap, "businessCategory"):
                     continue # skip
-
-                ldap["parentStem"] = "employees:" + ldap["businessCategory"];
 
                 if ldap["businessCategory"] in ["administration", "library"] and len(supannCodeEntite) in [2, 3] and (supannCodeEntite in children):
                     orFilter = [ exactTester('supannEntiteAffectation', supannCodeEntite) ]
@@ -289,7 +289,7 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
 
                 if isPedagogy or ldap["businessCategory"] == "pedagogy":
                     ldap["description"] += " (personnel)"
-                elif ldap["businessCategory"] in ["administration", "library"] and len(supannCodeEntite) == 4 and len(ldap["supannCodeEntiteParent"]) in [2, 3]:
+                elif ldap["businessCategory"] in ["administration", "library"] and len(supannCodeEntite) == 4 and len(ldap["supannCodeEntiteParent"]) in [2, 3] and hasattr(businessCategories, ldap["supannCodeEntiteParent"]):
                     ldap["parentKey"] = "employees:" + businessCategories[ldap["supannCodeEntiteParent"]] + ":" + ldap["supannCodeEntiteParent"]
 
                 ldap["filter"] = andFilterToFilter([ supannEntiteAffectationFilter, eduPersonAffiliationFilter ])
@@ -365,7 +365,8 @@ try:
     neededParents = computeNeededParents(hashStore) # must be done after getting etapes and groups
     hashStore = {}
     createGroupsFrom_structures(hashStore, logger, ldp, neededParents)
-    if sitesFile: createGroups_sites(hashStore, logger, sitesFile)
+    if sitesFile: 
+        createGroups_sites(hashStore, logger, sitesFile)
 
     write_to_file(hashStore, outFile)
 		
