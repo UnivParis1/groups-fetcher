@@ -3,20 +3,28 @@
 # Script à exécuter dans un CRON une fois par jour.
 
 GROUPER_HOME=/usr/local/grouper/grouper
-GROUPER_LOG=/var/log/grouper
+export GROUPER_HOME
 
 curDir=$(dirname $0)
 
 out_file=$curDir/temp.gsh
 conf_file=$curDir/config.ini
-log_file=$GROUPER_LOG/GSHcreator.log.
 
-echo -e "Creating GSH temporary file...\n"
-$curDir/GSHcreator.py $conf_file $out_file $log_file
+# Log files
+GROUPER_LOG=/var/log/grouper
 
-echo -e "Execute GSH temporary file...\n"
-$GROUPER_HOME/bin/gsh $out >> $GROUPER_LOG/GSHcreator-gsh.log
+GEN_GSH_LOG=$GROUPER_LOG/GSHcreator.log.
+EXEC_GSH_LOG=$GROUPER_LOG/GSHcreator-gsh.log
+PSP_EXPORT_LOG=$GROUPER_LOG/GSHcreator-psp-bulkSync.log
+
+echo -e "Creating GSH temporary file..."
+$curDir/GSHcreator.py $conf_file $out_file $GEN_GSH_LOG && echo -e "Done\n"
+
+echo -e "Execute GSH temporary file..."
+$GROUPER_HOME/bin/gsh $out_file >> $EXEC_GSH_LOG && echo -e "Done\n"
 
 # ensure modifications go to LDAP (for modifications not handled by export-modified-groups-to-LDAP)
-echo -e "Ensure modifications go to LDAP...\n"
-$GROUPER_HOME/bin/gsh -psp -bulkSync >> $GROUPER_LOG/GSHcreator-psp-bulkSync.log
+echo -e "Ensure modifications go to LDAP..."
+$GROUPER_HOME/bin/gsh -psp -bulkSync >> $PSP_EXPORT_LOG && echo -e "Done\n"
+
+exit 0
