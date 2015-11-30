@@ -17,6 +17,7 @@ GEN_GSH_LOG=$GROUPER_LOG/GSHcreator.log.
 EXEC_GSH_LOG=$GROUPER_LOG/GSHcreator-gsh.log
 PSP_EXPORT_LOG=$GROUPER_LOG/GSHcreator-psp-bulkSync.log
 
+cd $curDir
 echo -e "Creating GSH temporary file..."
 $curDir/GSHcreator.py $conf_file $out_file $GEN_GSH_LOG && echo -e "Done\n"
 
