@@ -350,7 +350,7 @@ def readPythonConf(file):
 		exec(fo.read(), globals(), h)
 	return h
 
-def createGroups_sites(hashStore, logger, sitesFile):
+def createGroupsFrom_sites(hashStore, logger, sitesFile):
 	cfg = readPythonConf(sitesFile)
 	for id, buildingNames in cfg["sites"].iteritems():
 		buildingNamesFilter = orFilterToFilter([ exactTester('buildingName', v) for v in buildingNames ])
@@ -362,6 +362,23 @@ def createGroups_sites(hashStore, logger, sitesFile):
 			"filter": "(&(eduPersonAffiliation=member)(accountStatus=active)" + buildingNamesFilter + ")",
 			} 
 		key = ldap["parentStem"] + ":" + id
+		hashStore[key] = ldap
+
+def createGroupsFrom_diploma(hashStore, logger, ldp):
+	result_set = ldap_search(ldp, etapesDN, ['ou', 'description', 'seeAlso'])
+	for ldapEntry in result_set :
+		ou, description, seeAlso = ldapEntry
+		if not re.match(r".*ou=U(02|27),ou=structures.*", str(seeAlso)):
+			continue
+		ldap = {}
+		ldap = { 
+			"parentStem": "students:diploma",
+			"id": ou,
+			"name": ou.upper(),
+			"description": description,
+			"filter": "(&(eduPersonAffiliation=student)(eduPersonOrgUnitDN=ou="+ ou +"," + etapesDN + "))"
+		}
+		key = ldap["parentStem"] + ":" + ldap["id"]
 		hashStore[key] = ldap
 
 logger = logging.getLogger()
@@ -389,15 +406,12 @@ try:
 	createGroupsFrom_etape(hashStore, logger, ldp)
 	neededParents = computeNeededParents(hashStore) # must be done after getting etapes and groups
 	hashStore = {}
+	
 	createGroupsFrom_structures(hashStore, logger, ldp, neededParents)
-
-	#if structuresFile:
-	#	deleteGroupsFrom_structures(groupsToDelete, logger, ldp)
-
-	#write_structures_to_file(hashStore, structuresFile)
-
+	createGroupsFrom_diploma(hashStore, logger, ldp)
+	
 	if sitesFile: 
-		createGroups_sites(hashStore, logger, sitesFile)
+		createGroupsFrom_sites(hashStore, logger, sitesFile)
 
 	write_to_file(hashStore, structuresFile, outFile)
 
