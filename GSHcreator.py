@@ -30,14 +30,13 @@ ldapUsername  = Config.get('ldap', 'username')
 ldapPassword  = Config.get('ldap', 'password')
 baseDN        = Config.get('ldap', 'baseDN')
 etapesDN      = Config.get('ldap', 'etapesDN')
-structuresDN = "ou=structures,"+baseDN
+structuresDN = "ou=structures,"+ baseDN
 sitesFile     = safeConfigGet('common', 'sitesFile')
 structuresFile     = safeConfigGet('common', 'structuresFile')
 
 personnelDescription = {
-	'staff': 'personnels administratifs et techniques', 
-	'faculty': 'chercheurs', 
-	'teacher' : 'enseignants',
+	'staff': 'BIATSS', 
+	'teacher' : 'Enseignants',
 	}
 personnelTypes = ['staff', 'faculty', 'teacher']
 
@@ -256,14 +255,14 @@ def get_ldap_value(ldapEntry, attr):
 def get_ldap_values(ldapEntry, attrs):
 	return [get_ldap_value(ldapEntry, attr) for attr in attrs] 
 
-def addSubGroupsForEachPersonnel(composanteKey, description, mainTester):
-	testers = []
+def addSubGroupsForEachPersonnelTypes(ldap, hashStore, supannEntiteAffectationFilter):
 	for typ, descr in personnelDescription.iteritems():
-		tester = [ mainTester, exactTester('eduPersonAffiliation', typ) ] 
-		description_ = description + " (" + descr + ")"
-		addGroupMulti(hashStore, composanteKey, composanteKey+"_"+typ, description_, description_, [tester])
-		testers.append(tester)
-	return testers
+		tmpStore = ldap.copy()
+		tmpStore["filter"] = andFilterToFilter([supannEntiteAffectationFilter, exactTester('eduPersonAffiliation', typ)])
+		tmpStore["description"] = ldap["description"] + " (" + descr + ")"
+		tmpStore["ou"] = ldap["ou"] + " " + descr
+		tmpStore["supannCodeEntite"] = ldap["supannCodeEntite"] + "-" + typ
+		hashStore[tmpStore["supannCodeEntite"]] = tmpStore
 
 
 def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
@@ -309,6 +308,9 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
 
 		eduPersonAffiliationFilter = personnelFilter()
 
+		if ldap["businessCategory"] == "pedagogy":
+			addSubGroupsForEachPersonnelTypes(ldap, hashStore, supannEntiteAffectationFilter)
+
 		if isPedagogy or ldap["businessCategory"] == "pedagogy":
 			ldap["description"] += " (personnel)"
 		elif ldap["businessCategory"] in ["administration", "library"] and len(supannCodeEntite) == 4 and len(ldap["supannCodeEntiteParent"]) in [2, 3]:
@@ -319,6 +321,7 @@ def createGroupsFrom_structures(hashStore, logger, ldp, neededParents):
 		del ldap["supannCodeEntiteParent"] # cleanup
 
 		key = ldap["parentStem"] + ":" + ldap["supannCodeEntite"]
+
 		hashStore[key] = ldap
 
 def deleteGroupsFrom_structures(groupsToDelete, logger, ldp):
@@ -327,7 +330,6 @@ def deleteGroupsFrom_structures(groupsToDelete, logger, ldp):
 	for k, v in cfg["structures"].iteritems():
 		if not v in result_set:
 			groupsToDelete.append(k)
-
 	return groupsToDelete
 
 # Création des groupes étapes, par UFR
@@ -409,8 +411,8 @@ try:
 	
 	createGroupsFrom_structures(hashStore, logger, ldp, neededParents)
 	createGroupsFrom_diploma(hashStore, logger, ldp)
-	
-	if sitesFile: 
+
+	if os.path.isfile(sitesFile): 
 		createGroupsFrom_sites(hashStore, logger, sitesFile)
 
 	write_to_file(hashStore, structuresFile, outFile)
